@@ -10,7 +10,7 @@ import CoreGraphics
 
 public typealias Point = CGPoint
 
-extension CGPoint {
+public extension CGPoint {
 	func angleWith(point: CGPoint) -> CGFloat {
 		atan2(y - point.y, x - point.x)
 	}
@@ -33,44 +33,44 @@ extension CGPoint {
 }
 
 
-func *(lhs: CGPoint, rhs: CGFloat) -> CGPoint {
+public func *(lhs: CGPoint, rhs: CGFloat) -> CGPoint {
 	CGPoint(x: lhs.x*rhs, y: lhs.y*rhs)
 }
 
-func /(lhs: CGPoint, rhs: CGFloat) -> CGPoint {
+public func /(lhs: CGPoint, rhs: CGFloat) -> CGPoint {
 	CGPoint(x: lhs.x/rhs, y: lhs.y/rhs)
 }
 
-func +(lhs: CGPoint, rhs: CGPoint) -> CGPoint {
+public func +(lhs: CGPoint, rhs: CGPoint) -> CGPoint {
 	CGPoint(x: lhs.x + rhs.x, y: lhs.y + rhs.y)
 }
 
-func -(lhs: CGPoint, rhs: CGPoint) -> CGPoint {
+public func -(lhs: CGPoint, rhs: CGPoint) -> CGPoint {
 	CGPoint(x: lhs.x - rhs.x, y: lhs.y - rhs.y)
 }
 
 
-func +(lhs: CGPoint, rhs: CGSize) -> CGPoint {
+public func +(lhs: CGPoint, rhs: CGSize) -> CGPoint {
 	CGPoint(x: lhs.x + rhs.width, y: lhs.y + rhs.height)
 }
 
-func -(lhs: CGPoint, rhs: CGSize) -> CGPoint {
+public func -(lhs: CGPoint, rhs: CGSize) -> CGPoint {
 	CGPoint(x: lhs.x - rhs.width, y: lhs.y - rhs.height)
 }
 
-func *(lhs: CGSize, rhs: CGFloat) -> CGSize {
+public func *(lhs: CGSize, rhs: CGFloat) -> CGSize {
 	CGSize(width: lhs.width*rhs, height: lhs.height*rhs)
 }
 
-func /(lhs: CGSize, rhs: CGFloat) -> CGSize {
+public func /(lhs: CGSize, rhs: CGFloat) -> CGSize {
 	CGSize(width: lhs.width/rhs, height: lhs.height/rhs)
 }
 
-func +=(lhs: inout CGPoint, rhs: CGPoint) {
+public func +=(lhs: inout CGPoint, rhs: CGPoint) {
 	lhs = lhs + rhs
 }
 
-func -=(lhs: inout CGPoint, rhs: CGPoint) {
+public func -=(lhs: inout CGPoint, rhs: CGPoint) {
 	lhs = lhs - rhs
 }
 
@@ -81,7 +81,7 @@ extension CGRect {
 
 
 
-extension CGRect {
+public extension CGRect {
 	var center: CGPoint {
 		CGPoint(x: midX, y: midY)
 	}

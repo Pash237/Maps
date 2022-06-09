@@ -57,6 +57,21 @@ class ViewController: UIViewController {
 			
 			return layer
 		}
+		
+		// draw marker
+		let start = Coordinates(37.322830, -122.032186)
+		
+		mapView.addMapLayer {layer in
+			let layer = layer ?? CALayer()
+			let imageLayer = layer.sublayers?.first ?? CALayer()
+			let size = CGSize(width: 34, height: 34)
+			imageLayer.frame = CGRect(origin: mapView.point(at: start) - size/2,
+									  size: size)
+			imageLayer.contents = UIImage(systemName: "heart.circle")?.cgImage
+			layer.addSublayer(imageLayer)
+			
+			return layer
+		}
 	}
 }
 
