@@ -17,6 +17,12 @@ public func -(lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> CLLoc
 	CLLocationCoordinate2D(latitude: lhs.latitude - rhs.latitude, longitude: lhs.longitude - rhs.longitude)
 }
 
+public extension Coordinates {
+	init(_ latitude: CLLocationDegrees, _ longitude: CLLocationDegrees) {
+		self.init(latitude: latitude, longitude: longitude)
+	}
+}
+
 public struct CoordinateBounds {
 	var northeast: Coordinates
 	var southwest: Coordinates

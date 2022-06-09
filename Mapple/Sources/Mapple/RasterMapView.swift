@@ -14,9 +14,11 @@ public class RasterMapView: MapScrollView {
 	private var tileLayersCache: [MapTile: MapTileLayer] = [:]
 	
 	public var tileSource: TileSource
-	public var drawingLayer = CAShapeLayer()
-	public var drawedOffset: CGPoint = .zero
-	public var drawedZoom: Double = 11
+	
+	private var drawingLayersConfigs: [((CALayer?) -> (CALayer))] = []
+	private var drawingLayers: [CALayer] = []
+	private var drawedLayerOffset: CGPoint = .zero
+	private var drawedLayerZoom: Double = 11
 	
 	public var camera: Camera {
 		get {
@@ -94,6 +96,15 @@ public class RasterMapView: MapScrollView {
 			layer.zPosition = -abs(zoom.rounded() - Double(layer.tile.zoom))
 		}
 	}
+	
+	private func positionDrawingLayers() {
+		for layer in drawingLayers {
+			layer.position = projection.convert(point: drawedLayerOffset, from: Double(drawedLayerZoom), to: zoom) - offset
+			let scale = pow(2.0, zoom - Double(drawedLayerZoom))
+			layer.transform = CATransform3DMakeScale(scale, scale, 1)
+			layer.zPosition = 1
+		}
+	}
 
 	public func coordinates(at screenPoint: Point) -> Coordinates {
 		projection.coordinates(from: screenPoint, at: zoom, tileSize: tileSize)
@@ -112,11 +123,40 @@ public class RasterMapView: MapScrollView {
 		}
 		DispatchQueue.main.asyncDebounce(target: self, after: 0.1) {[self] in
 			removeUnusedTileLayers()
+			
+			if ProcessInfo.processInfo.isLowPowerModeEnabled && drawedLayerZoom != zoom {
+				redrawLayers()
+				positionDrawingLayers()
+			}
 		}
 		
 		addRequiredTileLayers()
 		positionTileLayers()
 		
+		if drawedLayerZoom != zoom && !ProcessInfo.processInfo.isLowPowerModeEnabled {
+			redrawLayers()
+		}
+		positionDrawingLayers()
+		
 		CATransaction.setDisableActions(false)
+	}
+	
+	@discardableResult
+	public func addMapLayer(_ configureLayer: @escaping ((CALayer?) -> (CALayer))) -> CALayer {
+		let drawingLayer = configureLayer(nil)
+		drawingLayersConfigs.append(configureLayer)
+		drawingLayers.append(drawingLayer)
+		layer.addSublayer(drawingLayer)
+		redrawLayers()
+		positionDrawingLayers()
+		return drawingLayer
+	}
+	
+	private func redrawLayers() {
+		for (i, layer) in drawingLayers.enumerated() {
+			let _ = drawingLayersConfigs[i](layer)
+		}
+		
+		drawedLayerZoom = zoom
 	}
 }

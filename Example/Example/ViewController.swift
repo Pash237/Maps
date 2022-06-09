@@ -19,6 +19,44 @@ class ViewController: UIViewController {
 		view.addSubview(mapView)
 		
 		mapView.camera = Camera(center: Coordinates(latitude: 37.322621, longitude: -122.031945), zoom: 14)
+		
+		// draw track
+		let track = [
+			Coordinates(37.322830, -122.032186),
+			Coordinates(37.322853, -122.023205),
+			Coordinates(37.331860, -122.023233),
+			Coordinates(37.333116, -122.023643),
+			Coordinates(37.335326, -122.023587),
+			Coordinates(37.336419, -122.023293),
+			Coordinates(37.337669, -122.023326),
+			Coordinates(37.337756, -122.005407),
+			Coordinates(37.335864, -122.005407),
+			Coordinates(37.335873, -122.006310),
+		]
+		
+		mapView.addMapLayer {layer in
+			let layer = layer as? CAShapeLayer ?? CAShapeLayer()
+			let linePath = UIBezierPath()
+			
+			for (i, coordinates) in track.enumerated() {
+				let point = mapView.point(at: coordinates)
+				if i == 0 {
+					linePath.move(to: point)
+				} else {
+					linePath.addLine(to: point)
+				}
+			}
+			
+			layer.path = linePath.cgPath
+			layer.opacity = 1
+			layer.lineWidth = 3
+			layer.lineCap = .round
+			layer.lineJoin = .round
+			layer.fillColor = UIColor.clear.cgColor
+			layer.strokeColor = UIColor.systemRed.cgColor
+			
+			return layer
+		}
 	}
 }
 
