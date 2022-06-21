@@ -125,8 +125,10 @@ public class RasterMapView: MapScrollView {
 			removeUnusedTileLayers()
 			
 			if ProcessInfo.processInfo.isLowPowerModeEnabled && drawedLayerZoom != zoom {
+				CATransaction.setDisableActions(true)
 				redrawLayers()
 				positionDrawingLayers()
+				CATransaction.setDisableActions(false)
 			}
 		}
 		
