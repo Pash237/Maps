@@ -21,6 +21,14 @@ public class MapScrollView: UIView {
 	private var targetOffset: Point = .zero
 	private var displayLink: CADisplayLink?
 	
+	private var lastTouchTimestamp: TimeInterval = 0
+	private var lastTouchLocation: CGPoint = .zero
+	private var lastTouchTravelDistance: CGFloat = 0
+	private var doubleTapDragZooming = false
+	private var doubleTapDragZoomCenter: CGPoint = .zero
+	private let doubleTapDragZoomDelay: TimeInterval = 0.3
+	private let doubleTapDragZoomSpeed = 0.015
+	
 	private var touchesBeganTimestamps: [Int: TimeInterval] = [:]
 	
 	override init(frame: CGRect) {
@@ -54,10 +62,19 @@ public class MapScrollView: UIView {
 			touchesBeganTimestamps[touch.hash] = touch.timestamp
 		}
 		
+		// detect double tap
+		if event.activeTouches.count == 1 && lastTouchTravelDistance < 50 && event.timestamp - lastTouchTimestamp < doubleTapDragZoomDelay && (centroid - lastTouchLocation).length < 50 {
+			doubleTapDragZooming = true
+			doubleTapDragZoomCenter = centroid
+		} else {
+			doubleTapDragZooming = false
+		}
+		
 		targetOffset = offset
 		velocity = .zero
 		centroidToCalculateVelocity = centroid
 		timestampToCalculateVelocity = event.timestamp
+		lastTouchTravelDistance = 0
 	}
 	
 	public override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -80,7 +97,9 @@ public class MapScrollView: UIView {
 			timestampToCalculateVelocity = event.timestamp
 		}
 		
-		offset += (previousCentroid - centroid)
+		if !doubleTapDragZooming {
+			offset += (previousCentroid - centroid)
+		}
 		
 		if allTouches.count >= 2 {
 			allTouches.sort(by: {
@@ -108,6 +127,20 @@ public class MapScrollView: UIView {
 				//TODO: use more points to compute velocity
 				velocity = (centroid - centroidToCalculateVelocity) / time
 			}
+		}
+		
+		if allTouches.count == 1 {
+			if doubleTapDragZooming {
+				let previousZoom = zoom
+				zoom *= 1 + (previousCentroid - centroid).y / zoom * doubleTapDragZoomSpeed
+				
+				let zoomCenterOnMap = offset + doubleTapDragZoomCenter
+				let zoomChange = 1.0 - pow(2.0, zoom - previousZoom)
+				
+				offset -= zoomCenterOnMap * zoomChange
+			}
+			
+			lastTouchTravelDistance += (previousCentroid - centroid).length
 		}
 		
 		targetOffset = offset
@@ -143,6 +176,9 @@ public class MapScrollView: UIView {
 			}
 			
 			previousCentroid = nil
+			
+			lastTouchTimestamp = event.timestamp
+			lastTouchLocation = touches.first?.location(in: self) ?? .zero
 		}
 	}
 	
