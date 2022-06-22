@@ -35,6 +35,7 @@ public class MapScrollView: UIView {
 		super.init(frame: frame)
 		
 		isMultipleTouchEnabled = true
+		backgroundColor = .black
 	}
 	
 	required init?(coder: NSCoder) {
