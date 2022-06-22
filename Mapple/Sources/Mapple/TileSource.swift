@@ -16,14 +16,17 @@ public struct TileSource {
 	public var minZoom: Int = 0
 	public var maxZoom: Int = 22
 	
-	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 0, maxZoom: Int = 22) {
+	private let imagePipeline: ImagePipeline
+
+	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 0, maxZoom: Int = 22, imagePipeline: ImagePipeline = .defaultTileLoader) {
 		self.title = title
 		self.url = url
 		self.tileSize = tileSize
 		self.minZoom = minZoom
 		self.maxZoom = maxZoom
+		self.imagePipeline = imagePipeline
 	}
-	
+
 	func url(for tile: MapTile) -> URL {
 		URL(string: url
 			.replacingOccurrences(of: "{x}", with: "\(tile.x)")
@@ -32,26 +35,28 @@ public struct TileSource {
 			.replacingOccurrences(of: "{ratio}", with: UIScreen.main.scale > 1 ? "@2x" : "")
 		)!
 	}
-	
-	private let imagePipeline: ImagePipeline = {
+
+	func loadImage(for tile: MapTile) async throws -> CGImage? {
+		let url = url(for: tile)
+		return (try await imagePipeline.image(for: url)).image.cgImage
+	}
+}
+
+public extension ImagePipeline {
+	static var defaultTileLoader: ImagePipeline = {
 		let dataLoader: DataLoader = {
 			let config = URLSessionConfiguration.default
 			config.urlCache = nil
 			return DataLoader(configuration: config)
 		}()
-		
+
 		let diskCache = try! DataCache(name: "com.pash.maps")
 		diskCache.sizeLimit = 512 * 1024 * 1024  // 512 MB
 		diskCache.sweepInterval = 12 * 60 * 60   // 12 hours
-		
+
 		return ImagePipeline() {
 			$0.dataLoader = dataLoader
 			$0.dataCache = diskCache
 		}
 	}()
-	
-	func loadImage(for tile: MapTile) async throws -> CGImage? {
-		let url = url(for: tile)
-		return (try await imagePipeline.image(for: url)).image.cgImage
-	}
 }

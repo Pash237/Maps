@@ -11,9 +11,9 @@ import CoreLocation
 public class RasterMapView: MapScrollView {
 	private let projection = SphericalMercator()
 	
-	private var tileLayersCache: [MapTile: MapTileLayer] = [:]
+	private var tileLayersCache: [String: [MapTile: MapTileLayer]] = [:]
 	
-	public var tileSource: TileSource
+	public var tileSources: [TileSource]
 	
 	private var drawingLayersConfigs: [((CALayer?) -> (CALayer))] = []
 	private var drawingLayers: [CALayer] = []
@@ -30,21 +30,25 @@ public class RasterMapView: MapScrollView {
 			didScroll()
 		}
 	}
-
-	public init(frame: CGRect, tileSource: TileSource) {
-		self.tileSource = tileSource
+	
+	public init(frame: CGRect, tileSources: [TileSource]) {
+		self.tileSources = tileSources
 		
 		super.init(frame: frame)
 		
 		addRequiredTileLayers()
 		positionTileLayers()
 	}
+
+	public convenience init(frame: CGRect, tileSource: TileSource) {
+		self.init(frame: frame, tileSources: [tileSource])
+	}
 	
 	required init?(coder: NSCoder) {
 		fatalError("init(coder:) has not been implemented")
 	}
 	
-	private var tileSize: Int { tileSource.tileSize }
+	private var tileSize: Int { tileSources[0].tileSize }
 	
 	private func addRequiredTileLayers() {
 		let requiredZoom: Int = Int(zoom.rounded())
@@ -52,48 +56,60 @@ public class RasterMapView: MapScrollView {
 		let min = (projection.convert(point: offset, from: zoom, to: Double(requiredZoom)) - margin) / Double(tileSize)
 		let max = min + (Point(x: bounds.width, y: bounds.height) + margin*2) / Double(tileSize)
 		
-		for x in Int(min.x)...Int(max.x) {
-			for y in Int(min.y)...Int(max.y) {
-				let tile = MapTile(x: x, y: y, zoom: requiredZoom, size: tileSize)
-				if tileLayersCache[tile] == nil {
-					let layer = MapTileLayer(tile: tile, tileSource: tileSource)
-					self.layer.addSublayer(layer)
-					tileLayersCache[tile] = layer
+		for tileSource in tileSources {
+			for x in Int(min.x)...Int(max.x) {
+				for y in Int(min.y)...Int(max.y) {
+					let tile = MapTile(x: x, y: y, zoom: requiredZoom, size: tileSize)
+					if tileLayersCache[tileSource.url] == nil {
+						tileLayersCache[tileSource.url] = [:]
+					}
+					if tileLayersCache[tileSource.url]![tile] == nil {
+						let layer = MapTileLayer(tile: tile, tileSource: tileSource)
+						self.layer.addSublayer(layer)
+						tileLayersCache[tileSource.url]![tile] = layer
+					}
 				}
 			}
 		}
 	}
 	
-	private var tileLayers: [MapTileLayer] {
-		(layer.sublayers ?? []).compactMap {$0 as? MapTileLayer}
+	private func remove(layer tileLayer: MapTileLayer, in tileSource: TileSource) {
+		tileLayersCache[tileSource.url]?.removeValue(forKey: tileLayer.tile)
+		layer.sublayers?.remove(object: tileLayer)
 	}
 	
 	private func removeUnusedTileLayers() {
-		//TODO: remove layers
-		
 		let margin = CGPoint(x: 300, y: 300)
+		let bestZoom = Int(zoom.rounded())
 		
-		for tileLayer in tileLayers {
-			if tileLayer.tile.zoom != Int(zoom.rounded()) {
-//				layer.sublayers?.remove(object: tileLayer)
-			}
-			
-			let tileRectOnScreen = convert(tileLayer.frame, to: self).insetBy(dx: -margin.x, dy: -margin.y)
-			
-			if !bounds.intersects(tileRectOnScreen) {
-				tileLayersCache[tileLayer.tile] = nil
-				layer.sublayers?.remove(object: tileLayer)
+		for tileSource in tileSources {
+			let tileLayers = (tileLayersCache[tileSource.url] ?? [:]).values
+			for tileLayer in tileLayers {
+				// if tile is out of screen (with some margin), remove it
+				if !bounds.insetBy(dx: -margin.x, dy: -margin.y).intersects(tileLayer.frame) {
+					remove(layer: tileLayer, in: tileSource)
+					continue
+				}
 			}
 		}
 	}
 
 	private func positionTileLayers() {
-		for layer in tileLayers {
-			layer.position = projection.convert(point: layer.tile.offset, from: Double(layer.tile.zoom), to: zoom) - offset
-			let scale = pow(2.0, zoom - Double(layer.tile.zoom))
-			layer.transform = CATransform3DMakeScale(scale, scale, 1)
+		for tileSource in tileSources {
+			let tileLayers = (tileLayersCache[tileSource.url] ?? [:]).values
+			let indexAcrossMapSources = tileSources.count == 1
+										  ? 0
+										  : tileSources.count - tileSources.firstIndex(where: {$0.url == tileSource.url })!
 			
-			layer.zPosition = -abs(zoom.rounded() - Double(layer.tile.zoom))
+			for layer in tileLayers {
+				let scale = pow(2.0, zoom - Double(layer.tile.zoom))
+				let size = Double(tileSource.tileSize) * scale
+				layer.frame = CGRect(
+					origin: projection.convert(point: layer.tile.offset, from: Double(layer.tile.zoom), to: zoom) - offset,
+					size: CGSize(width: size, height: size))
+				
+				layer.zPosition = -abs(zoom.rounded() - Double(layer.tile.zoom)) - 25.0 * Double(indexAcrossMapSources)
+			}
 		}
 	}
 	
@@ -112,6 +128,9 @@ public class RasterMapView: MapScrollView {
 	
 	public func point(at coordinates: Coordinates) -> Point {
 		projection.point(at: zoom, tileSize: tileSize, from: coordinates)
+	}
+	public func screenPoint(at coordinates: Coordinates) -> Point {
+		point(at: coordinates) - offset
 	}
 	
 	public override func didScroll() {
