@@ -18,9 +18,14 @@ struct MapTile: Equatable, Hashable {
 	}
 }
 
+extension Notification.Name {
+	static let mapTileLoaded = NSNotification.Name("MapTileLoaded")
+}
+
 class MapTileLayer: CALayer {
 	var tile: MapTile
 	var tileSource: TileSource
+	@Published var isLoaded = false
 	
 	init(tile: MapTile, tileSource: TileSource) {
 		self.tile = tile
@@ -33,6 +38,8 @@ class MapTileLayer: CALayer {
 		isOpaque = true
 		
 		Task {
+			//TODO: throttle
+			//TODO: load most needed tiles first
 			await loadImage()
 		}
 	}
@@ -44,6 +51,8 @@ class MapTileLayer: CALayer {
 //			print("Loaded \(cgImage.width)x\(cgImage.height) from \(url)")
 			await MainActor.run {
 				contents = cgImage
+				isLoaded = true
+				NotificationCenter.default.post(name: .mapTileLoaded, object: self)
 			}
 		}
 	}

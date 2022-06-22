@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import Combine
 import CoreLocation
 
 public class RasterMapView: MapScrollView {
@@ -19,6 +20,8 @@ public class RasterMapView: MapScrollView {
 	private var drawingLayers: [CALayer] = []
 	private var drawedLayerOffset: CGPoint = .zero
 	private var drawedLayerZoom: Double = 11
+	
+	private var bag = Set<AnyCancellable>()
 	
 	public var camera: Camera {
 		get {
@@ -38,6 +41,13 @@ public class RasterMapView: MapScrollView {
 		
 		addRequiredTileLayers()
 		positionTileLayers()
+		
+		NotificationCenter.default.publisher(for: .mapTileLoaded)
+			.throttle(for: 0.1, scheduler: DispatchQueue.main, latest: true)
+			.sink() {[weak self] _ in
+				self?.removeUnusedTileLayers()
+			}
+			.store(in: &bag)
 	}
 
 	public convenience init(frame: CGRect, tileSource: TileSource) {
