@@ -38,7 +38,19 @@ public struct TileSource {
 
 	func loadImage(for tile: MapTile) async throws -> CGImage? {
 		let url = url(for: tile)
-		return (try await imagePipeline.image(for: url)).image.cgImage
+		var request = ImageRequest(url: url)
+		request.priority = .normal
+		return (try await imagePipeline.image(for: request)).image.cgImage
+	}
+	
+	func hasCachedImage(for tile: MapTile) -> Bool {
+		let url = url(for: tile)
+		return imagePipeline.cache.containsCachedImage(for: url)
+	}
+	
+	func cachedImage(for tile: MapTile) -> CGImage? {
+		let url = url(for: tile)
+		return imagePipeline.cache.cachedImage(for: url)?.image.cgImage
 	}
 }
 
@@ -57,6 +69,7 @@ public extension ImagePipeline {
 		return ImagePipeline() {
 			$0.dataLoader = dataLoader
 			$0.dataCache = diskCache
+			$0.dataLoadingQueue.maxConcurrentOperationCount = 6
 		}
 	}()
 }

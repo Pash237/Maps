@@ -48,7 +48,6 @@ class MapTileLayer: CALayer {
 		//TODO: retry loading when network is available
 		
 		if let cgImage = try? await tileSource.loadImage(for: tile) {
-//			print("Loaded \(cgImage.width)x\(cgImage.height) from \(url)")
 			await MainActor.run {
 				contents = cgImage
 				isLoaded = true
