@@ -34,13 +34,12 @@ public class RasterMapView: MapScrollView {
 		}
 	}
 	
-	public init(frame: CGRect, tileSources: [TileSource]) {
+	public init(frame: CGRect, tileSources: [TileSource], camera: Camera) {
 		self.tileSources = tileSources
 		
 		super.init(frame: frame)
 		
-		addRequiredTileLayers()
-		positionTileLayers()
+		({ self.camera = camera })()
 
 		NotificationCenter.default.publisher(for: .mapTileLoaded)
 			.throttle(for: 0.0, scheduler: DispatchQueue.main, latest: true)
@@ -50,8 +49,8 @@ public class RasterMapView: MapScrollView {
 			.store(in: &bag)
 	}
 
-	public convenience init(frame: CGRect, tileSource: TileSource) {
-		self.init(frame: frame, tileSources: [tileSource])
+	public convenience init(frame: CGRect, tileSource: TileSource, camera: Camera) {
+		self.init(frame: frame, tileSources: [tileSource], camera: camera)
 	}
 	
 	required init?(coder: NSCoder) {

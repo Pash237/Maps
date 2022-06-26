@@ -12,13 +12,14 @@ class ViewController: UIViewController {
 	override func viewDidLoad() {
 		super.viewDidLoad()
 		
-		let tileSource = TileSource(title: "OpenStreetMap", url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png")
-		
-		let mapView = RasterMapView(frame: view.bounds, tileSource: tileSource)
+		let camera = Camera(center: Coordinates(latitude: 37.322621, longitude: -122.031945), zoom: 14)
+		let mapView = RasterMapView(frame: view.bounds, tileSources: [
+			TileSource(title: "OpenStreetMap", url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+			TileSource(title: "OpenStreetMap Traces", url: "https://gps-a.tile.openstreetmap.org/lines/{z}/{x}/{y}.png")
+		], camera: camera)
 		mapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 		view.addSubview(mapView)
 		
-		mapView.camera = Camera(center: Coordinates(latitude: 37.322621, longitude: -122.031945), zoom: 14)
 		
 		// draw track
 		let track = [
