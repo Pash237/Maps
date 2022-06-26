@@ -93,12 +93,24 @@ public class RasterMapView: MapScrollView {
 		layer.sublayers?.remove(object: tileLayer)
 	}
 	
+	private var bestZoom: Int { Int(zoom.rounded()) }
+	
+	private func layers(in tileSource: TileSource, sorted: Bool = false) -> [MapTileLayer] {
+		let layers = (tileLayersCache[tileSource.url] ?? [:]).values
+		if sorted {
+			return layers.sorted {
+				abs($0.tile.zoom - bestZoom) > abs($1.tile.zoom - bestZoom)
+			}
+		} else {
+			return Array(layers)
+		}
+	}
+	
 	private func removeUnusedTileLayers() {
 		let margin = CGPoint(x: 302, y: 302)
-		let bestZoom = Int(zoom.rounded())
 		
 		for tileSource in tileSources {
-			let tileLayers = (tileLayersCache[tileSource.url] ?? [:]).values
+			let tileLayers = layers(in: tileSource)
 			for tileLayer in tileLayers {
 				// if tile is out of screen (with some margin), remove it
 				if !bounds.insetBy(dx: -margin.x, dy: -margin.y).intersects(tileLayer.frame) {
@@ -109,12 +121,8 @@ public class RasterMapView: MapScrollView {
 		}
 
 		for tileSource in tileSources {
-			let tileLayers = (tileLayersCache[tileSource.url] ?? [:]).values
-							  .sorted {
-								  abs($0.tile.zoom - bestZoom) > abs($1.tile.zoom - bestZoom)
-							  }
+			let tileLayers = layers(in: tileSource, sorted: true)
 			for tileLayer in tileLayers {
-
 				if tileLayer.tile.zoom != bestZoom {
 					// we're zooming out and can throw away unused smaller tiles
 					let loadedLargerTiles = tileLayers.filter {
@@ -131,10 +139,7 @@ public class RasterMapView: MapScrollView {
 
 		//TODO: mask larger tiles to avoid overlaps
 		for tileSource in tileSources {
-			let tileLayers = (tileLayersCache[tileSource.url] ?? [:]).values
-							  .sorted {
-								  abs($0.tile.zoom - bestZoom) > abs($1.tile.zoom - bestZoom)
-							  }
+			let tileLayers = layers(in: tileSource, sorted: true)
 			for tileLayer in tileLayers {
 				if tileLayer.tile.zoom != bestZoom {
 					let tileVisiblePart = tileLayer.frame.intersection(bounds)
@@ -186,7 +191,7 @@ public class RasterMapView: MapScrollView {
 
 	private func positionTileLayers() {
 		for tileSource in tileSources {
-			let tileLayers = (tileLayersCache[tileSource.url] ?? [:]).values
+			let tileLayers = layers(in: tileSource)
 			let indexAcrossMapSources = tileSources.count == 1
 										  ? 0
 										  : tileSources.count - tileSources.firstIndex(where: {$0.url == tileSource.url })!
@@ -229,6 +234,7 @@ public class RasterMapView: MapScrollView {
 		addRequiredTileLayers()
 		positionTileLayers()
 		removeUnusedTileLayers()
+		prioritizeLoading()
 		
 		if drawedLayerZoom != zoom {
 			redrawLayers()
@@ -256,4 +262,24 @@ public class RasterMapView: MapScrollView {
 		
 		drawedLayerZoom = zoom
 	}
+	
+	private func prioritizeLoading() {
+		for (i, tileSource) in tileSources.enumerated() {
+			let tileLayers = layers(in: tileSource)
+			for layer in tileLayers {
+				if layer.tile.zoom != bestZoom {
+					layer.loadTaskPriority = .low
+				}
+				else if !bounds.intersects(layer.frame) {
+					layer.loadTaskPriority = .normal
+				}
+				else if i == 0 && tileSources.count > 1 {
+					layer.loadTaskPriority = .veryHigh
+				} else {
+					layer.loadTaskPriority = .high
+				}
+			}
+		}
+	}
+}
 }

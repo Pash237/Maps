@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import Nuke
 
 struct MapTile: Equatable, Hashable {
 	var x: Int
@@ -25,7 +26,9 @@ extension Notification.Name {
 class MapTileLayer: CALayer {
 	var tile: MapTile
 	var tileSource: TileSource
-	@Published var isLoaded = false
+	var isLoaded = false
+	
+	var imageTask: ImageTask?
 	
 	init(tile: MapTile, tileSource: TileSource) {
 		self.tile = tile
@@ -37,22 +40,44 @@ class MapTileLayer: CALayer {
 		frame = CGRect(x: 0, y: 0, width: tile.size, height: tile.size)
 		isOpaque = true
 		
-		Task {
-			//TODO: throttle
-			//TODO: load most needed tiles first
-			await loadImage()
+		//TODO: throttle?
+		//TODO: retry loading when network becomes available
+		loadImage()
+	}
+	
+	private func loadImage() {
+		imageTask = tileSource.loadImage(for: tile) {[weak self] result in
+			if let cgImage = try? result.get().image.cgImage {
+				guard let self = self else {return}
+				self.contents = cgImage
+				self.isLoaded = true
+				self.imageTask = nil
+				NotificationCenter.default.post(name: .mapTileLoaded, object: self)
+			}
 		}
 	}
 	
-	private func loadImage() async {
-		//TODO: retry loading when network is available
-		
-		if let cgImage = try? await tileSource.loadImage(for: tile) {
-			await MainActor.run {
-				contents = cgImage
-				isLoaded = true
-				NotificationCenter.default.post(name: .mapTileLoaded, object: self)
+	func cancelLoading() {
+		imageTask?.cancel()
+	}
+	
+	deinit {
+		if let task = imageTask {
+			let isAlmostLoaded = task.totalUnitCount > 0 && Double(task.completedUnitCount)/Double(task.totalUnitCount) > 0.4
+			if isAlmostLoaded {
+				// almost loaded — don't cancel
+			} else {
+				task.cancel()
 			}
+		}
+	}
+	
+	var loadTaskPriority: ImageRequest.Priority {
+		get {
+			imageTask?.priority ?? .normal
+		}
+		set {
+			imageTask?.priority = newValue
 		}
 	}
 	
