@@ -35,12 +35,10 @@ public struct TileSource {
 			.replacingOccurrences(of: "{ratio}", with: UIScreen.main.scale > 1 ? "@2x" : "")
 		)!
 	}
-
-	func loadImage(for tile: MapTile) async throws -> CGImage? {
+	
+	func loadImage(for tile: MapTile, completion: @escaping ((_ result: Result<ImageResponse, ImagePipeline.Error>) -> Void)) -> ImageTask {
 		let url = url(for: tile)
-		var request = ImageRequest(url: url)
-		request.priority = .normal
-		return (try await imagePipeline.image(for: request)).image.cgImage
+		return imagePipeline.loadImage(with: url, completion: completion)
 	}
 	
 	func hasCachedImage(for tile: MapTile) -> Bool {
