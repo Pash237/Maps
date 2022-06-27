@@ -81,25 +81,27 @@ public class RasterMapView: MapScrollView {
 						let layer = MapTileLayer(tile: tile, tileSource: tileSource)
 						self.layer.addSublayer(layer)
 						tileLayersCache[tileSource.url]![tile] = layer
-						
-						if !tileSource.hasCachedImage(for: tile) {
-							//add already loaded larger tiles while this required tile is loading
-							var multiplier = 1
-							for smallerZoom in (1..<requiredZoom).reversed() {
-								multiplier *= 2
-								let largerTile = MapTile(x: tile.x/multiplier,
-														 y: tile.y/multiplier,
-														 zoom: smallerZoom,
-														 size: tileSize)
-								if tileLayersCache[tileSource.url]![largerTile] != nil && tileSource.hasCachedImage(for: largerTile) {
-									break
-								}
-								if tileSource.hasCachedImage(for: largerTile) {
-									let layer = MapTileLayer(tile: largerTile, tileSource: tileSource)
-									self.layer.addSublayer(layer)
-									tileLayersCache[tileSource.url]![largerTile] = layer
-									break
-								}
+					}
+					
+					if !tileSource.hasCachedImage(for: tile) {
+						//add already loaded larger tiles while this required tile is loading
+						var multiplier = 1
+						for smallerZoom in (1..<requiredZoom).reversed() {
+							multiplier *= 2
+							let largerTile = MapTile(x: tile.x/multiplier,
+													 y: tile.y/multiplier,
+													 zoom: smallerZoom,
+													 size: tileSize)
+							if tileLayersCache[tileSource.url]![largerTile] != nil && tileSource.hasCachedImage(for: largerTile) {
+								break
+							}
+							if tileSource.hasCachedImage(for: largerTile) {
+								let layer = MapTileLayer(tile: largerTile, tileSource: tileSource)
+								self.layer.addSublayer(layer)
+								tileLayersCache[tileSource.url]![largerTile] = layer
+								
+								print("      adding larger tile \(largerTile)")
+								break
 							}
 						}
 					}
