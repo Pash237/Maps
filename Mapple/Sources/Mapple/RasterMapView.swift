@@ -8,6 +8,7 @@
 import UIKit
 import Combine
 import CoreLocation
+import Nuke
 
 public class RasterMapView: MapScrollView {
 	private let projection = SphericalMercator()
@@ -42,7 +43,7 @@ public class RasterMapView: MapScrollView {
 		({ self.camera = camera })()
 
 		NotificationCenter.default.publisher(for: .mapTileLoaded)
-			.throttle(for: 0.0, scheduler: DispatchQueue.main, latest: true)
+			.throttle(for: 0.01, scheduler: DispatchQueue.main, latest: true)
 			.sink() {[weak self] _ in
 				self?.removeUnusedTileLayers()
 			}
@@ -63,20 +64,23 @@ public class RasterMapView: MapScrollView {
 		let requiredZoom: Int = Int(zoom.rounded())
 		let requiredScale = pow(2.0, Double(requiredZoom) - zoom)
 		let size = Double(tileSize)
-		let margin = CGPoint(x: 300, y: 300)
+		let margin = CGPoint(x: 200, y: 200)
 		let topLeft = projection.convert(point: offset - margin, from: zoom, to: Double(requiredZoom))
 		
 		let min = topLeft / size
 		let max = (topLeft + Point(x: bounds.width, y: bounds.height)*requiredScale + margin*2*requiredScale) / size
 		
+		for tileSource in tileSources {
+			if tileLayersCache[tileSource.url] == nil {
+				tileLayersCache[tileSource.url] = [:]
+			}
+		}
 		
 		for tileSource in tileSources {
 			for x in Int(min.x)...Int(max.x) {
 				for y in Int(min.y)...Int(max.y) {
 					let tile = MapTile(x: x, y: y, zoom: requiredZoom, size: tileSize)
-					if tileLayersCache[tileSource.url] == nil {
-						tileLayersCache[tileSource.url] = [:]
-					}
+					
 					if tileLayersCache[tileSource.url]![tile] == nil {
 						let layer = MapTileLayer(tile: tile, tileSource: tileSource)
 						self.layer.addSublayer(layer)
@@ -99,8 +103,6 @@ public class RasterMapView: MapScrollView {
 								let layer = MapTileLayer(tile: largerTile, tileSource: tileSource)
 								self.layer.addSublayer(layer)
 								tileLayersCache[tileSource.url]![largerTile] = layer
-								
-								print("      adding larger tile \(largerTile)")
 								break
 							}
 						}
@@ -129,7 +131,7 @@ public class RasterMapView: MapScrollView {
 	}
 	
 	private func removeUnusedTileLayers() {
-		let margin = CGPoint(x: 302, y: 302)
+		let margin = CGPoint(x: 220, y: 220)
 		
 		for tileSource in tileSources {
 			let tileLayers = layers(in: tileSource)
@@ -149,6 +151,7 @@ public class RasterMapView: MapScrollView {
 					// we're zooming out and can throw away unused smaller tiles
 					let loadedLargerTiles = tileLayers.filter {
 						$0 !== tileLayer && $0.isLoaded && $0.tile.zoom < tileLayer.tile.zoom
+						&& abs($0.tile.zoom - bestZoom) < abs(tileLayer.tile.zoom - bestZoom)
 					}
 					if loadedLargerTiles.contains(where: {$0.frame.contains(tileLayer.frame.insetBy(dx: 1, dy: 1))}) {
 						// some existing larger and more appropriate tile overlaps this tile — remove it
@@ -159,13 +162,25 @@ public class RasterMapView: MapScrollView {
 			}
 		}
 
+		
+		for tileSource in tileSources {
+			let tileLayers = layers(in: tileSource, sorted: true)
+			for tileLayer in tileLayers {
+				if tileLayer.tile.zoom != bestZoom && !tileLayer.isLoaded && !tileLayer.isAlmostLoaded && !tileSource.hasCachedImage(for: tileLayer.tile) {
+					// remove layer if its zoom doesn't match and it's not loaded
+					print("Removing \(tileLayer.tile) — not loaded and zoom doesn't match")
+					remove(layer: tileLayer, in: tileSource)
+				}
+			}
+		}
+		
 		//TODO: mask larger tiles to avoid overlaps
 		for tileSource in tileSources {
 			let tileLayers = layers(in: tileSource, sorted: true)
 			for tileLayer in tileLayers {
 				if tileLayer.tile.zoom != bestZoom {
-					let tileVisiblePart = tileLayer.frame.intersection(bounds.insetBy(dx: -margin.x, dy: -margin.y))
-
+					let tileVisiblePart = tileLayer.frame.intersection(bounds)
+					
 					// don't bother with tiles that are out of screen
 					if tileVisiblePart.width < 1 || tileVisiblePart.height < 1 {
 						remove(layer: tileLayer, in: tileSource)
@@ -179,14 +194,20 @@ public class RasterMapView: MapScrollView {
 						$0 !== tileLayer && $0.isLoaded && $0.tile.zoom > tileLayer.tile.zoom
 					}
 
-					// take 4 points in the visible area — if they are covered with something, suppose that entire region
+					// take some points in the visible area — if they are covered with something, suppose that entire region
 					// is covered and it is safe to remove tile
 					let checkPoints = [
-						tileVisiblePart.origin + Point(x: tileVisiblePart.width*0.25, y: tileVisiblePart.width*0.25),
-						tileVisiblePart.origin + Point(x: tileVisiblePart.width*0.75, y: tileVisiblePart.width*0.25),
-						tileVisiblePart.origin + Point(x: tileVisiblePart.width*0.25, y: tileVisiblePart.width*0.75),
-						tileVisiblePart.origin + Point(x: tileVisiblePart.width*0.75, y: tileVisiblePart.width*0.75),
-					]
+						Point(0.12, 0.12), Point(0.12, 0.24), Point(0.12, 0.35), Point(0.12, 0.47), Point(0.12, 0.62), Point(0.12, 0.73), Point(0.12, 0.87),
+						Point(0.24, 0.12), Point(0.24, 0.24), Point(0.24, 0.35), Point(0.24, 0.47), Point(0.24, 0.62), Point(0.24, 0.73), Point(0.24, 0.87),
+						Point(0.35, 0.12), Point(0.35, 0.24), Point(0.35, 0.35), Point(0.35, 0.47), Point(0.35, 0.62), Point(0.35, 0.73), Point(0.35, 0.87),
+						Point(0.47, 0.12), Point(0.47, 0.24), Point(0.47, 0.35), Point(0.47, 0.47), Point(0.47, 0.62), Point(0.47, 0.73), Point(0.47, 0.87),
+						Point(0.62, 0.12), Point(0.62, 0.24), Point(0.62, 0.35), Point(0.62, 0.47), Point(0.62, 0.62), Point(0.62, 0.73), Point(0.62, 0.87),
+						Point(0.73, 0.12), Point(0.73, 0.24), Point(0.73, 0.35), Point(0.73, 0.47), Point(0.73, 0.62), Point(0.73, 0.73), Point(0.73, 0.87),
+						Point(0.87, 0.12), Point(0.87, 0.24), Point(0.87, 0.35), Point(0.87, 0.47), Point(0.87, 0.62), Point(0.87, 0.73), Point(0.87, 0.87),
+					].map {
+						tileVisiblePart.origin + Point(tileVisiblePart.width*$0.x, tileVisiblePart.height*$0.y)
+					}
+					
 					for checkPoint in checkPoints {
 						var pointCovered = false
 						for layer in loadedSmallerTiles {
@@ -295,8 +316,10 @@ public class RasterMapView: MapScrollView {
 						// load right now if it's cached
 						layer.loadImage()
 					} else {
-						DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {[weak layer] in
-							layer?.loadImage()
+						DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {[weak self, weak layer] in
+							if let self = self, let layer = layer {
+								layer.loadImage(priority: self.priority(for: layer))
+							}
 						}
 					}
 				}
@@ -304,21 +327,28 @@ public class RasterMapView: MapScrollView {
 		}
 	}
 	
+	private func priority(for layer: MapTileLayer) -> ImageRequest.Priority {
+		if abs(layer.tile.zoom - bestZoom) >= 2 {
+			return .veryLow
+		}
+		else if layer.tile.zoom != bestZoom {
+			return .low
+		}
+		else if !bounds.intersects(layer.frame) {
+			return .normal
+		}
+		else if tileSources.count > 1 && layer.tileSource.url == tileSources[0].url {
+			return .veryHigh
+		} else {
+			return .high
+		}
+	}
+	
 	private func prioritizeLoading() {
-		for (i, tileSource) in tileSources.enumerated() {
+		for tileSource in tileSources {
 			let tileLayers = layers(in: tileSource)
 			for layer in tileLayers {
-				if layer.tile.zoom != bestZoom {
-					layer.loadTaskPriority = .low
-				}
-				else if !bounds.intersects(layer.frame) {
-					layer.loadTaskPriority = .normal
-				}
-				else if i == 0 && tileSources.count > 1 {
-					layer.loadTaskPriority = .veryHigh
-				} else {
-					layer.loadTaskPriority = .high
-				}
+				layer.loadTaskPriority = priority(for: layer)
 			}
 		}
 	}
