@@ -256,6 +256,7 @@ public class RasterMapView: MapScrollView {
 		addRequiredTileLayers()
 		positionTileLayers()
 		removeUnusedTileLayers()
+		startLoadingRequiredTiles()
 		prioritizeLoading()
 		
 		if drawedLayerZoom != zoom {
@@ -283,6 +284,24 @@ public class RasterMapView: MapScrollView {
 		}
 		
 		drawedLayerZoom = zoom
+	}
+	
+	private func startLoadingRequiredTiles() {
+		for tileSource in tileSources {
+			let tileLayers = layers(in: tileSource)
+			for layer in tileLayers {
+				if !layer.isLoaded && !layer.isLoading {
+					if tileSource.hasCachedImage(for: layer.tile) {
+						// load right now if it's cached
+						layer.loadImage()
+					} else {
+						DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {[weak layer] in
+							layer?.loadImage()
+						}
+					}
+				}
+			}
+		}
 	}
 	
 	private func prioritizeLoading() {

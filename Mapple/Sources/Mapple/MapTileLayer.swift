@@ -24,11 +24,12 @@ extension Notification.Name {
 }
 
 class MapTileLayer: CALayer {
-	var tile: MapTile
-	var tileSource: TileSource
-	var isLoaded = false
+	private(set) var tile: MapTile
+	private(set) var tileSource: TileSource
+	private(set) var isLoaded = false
+	private(set) var isLoading = false
 	
-	var imageTask: ImageTask?
+	private var imageTask: ImageTask?
 	
 	init(tile: MapTile, tileSource: TileSource) {
 		self.tile = tile
@@ -40,35 +41,41 @@ class MapTileLayer: CALayer {
 		frame = CGRect(x: 0, y: 0, width: tile.size, height: tile.size)
 		isOpaque = true
 		
-		//TODO: throttle?
-		//TODO: retry loading when network becomes available
-		loadImage()
 	}
 	
-	private func loadImage() {
+	func loadImage(priority: ImageRequest.Priority? = nil) {
+		isLoading = true
 		imageTask = tileSource.loadImage(for: tile) {[weak self] result in
 			if let cgImage = try? result.get().image.cgImage {
 				guard let self = self else {return}
 				self.contents = cgImage
 				self.isLoaded = true
+				self.isLoading = false
 				self.imageTask = nil
 				NotificationCenter.default.post(name: .mapTileLoaded, object: self)
 			}
+		}
+		if let priority = priority {
+			imageTask?.priority = priority
 		}
 	}
 	
 	func cancelLoading() {
 		imageTask?.cancel()
+		imageTask = nil
+		isLoading = false
+	}
+	
+	var isAlmostLoaded: Bool {
+		if let task = imageTask {
+			return task.totalUnitCount > 0 && Double(task.completedUnitCount)/Double(task.totalUnitCount) > 0.4
+		}
+		return isLoaded
 	}
 	
 	deinit {
-		if let task = imageTask {
-			let isAlmostLoaded = task.totalUnitCount > 0 && Double(task.completedUnitCount)/Double(task.totalUnitCount) > 0.4
-			if isAlmostLoaded {
-				// almost loaded — don't cancel
-			} else {
-				task.cancel()
-			}
+		if let task = imageTask, !isAlmostLoaded {
+			task.cancel()
 		}
 	}
 	

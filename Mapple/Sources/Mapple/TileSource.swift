@@ -57,6 +57,7 @@ public extension ImagePipeline {
 		let dataLoader: DataLoader = {
 			let config = URLSessionConfiguration.default
 			config.urlCache = nil
+			config.waitsForConnectivity = true
 			return DataLoader(configuration: config)
 		}()
 
