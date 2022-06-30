@@ -17,6 +17,8 @@ public struct TileSource {
 	public var maxZoom: Int = 22
 	
 	private let imagePipeline: ImagePipeline
+	
+	private static var cachedImageLookup: [String:[MapTile:Bool]] = [:]
 
 	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 0, maxZoom: Int = 22, imagePipeline: ImagePipeline = .defaultTileLoader) {
 		self.title = title
@@ -25,6 +27,10 @@ public struct TileSource {
 		self.minZoom = minZoom
 		self.maxZoom = maxZoom
 		self.imagePipeline = imagePipeline
+		
+		if Self.cachedImageLookup[url] == nil {
+			Self.cachedImageLookup[url] = [:]
+		}
 	}
 
 	func url(for tile: MapTile) -> URL {
@@ -38,12 +44,23 @@ public struct TileSource {
 	
 	func loadImage(for tile: MapTile, completion: @escaping ((_ result: Result<ImageResponse, ImagePipeline.Error>) -> Void)) -> ImageTask {
 		let url = url(for: tile)
-		return imagePipeline.loadImage(with: url, completion: completion)
+		return imagePipeline.loadImage(with: url, completion: {result in
+			if case .success = result {
+				Self.cachedImageLookup[self.url]?[tile] = true
+			}
+			completion(result)
+		})
 	}
 	
 	func hasCachedImage(for tile: MapTile) -> Bool {
+		if let cached = Self.cachedImageLookup[url]?[tile] {
+			return cached
+		}
+		
 		let url = url(for: tile)
-		return imagePipeline.cache.containsCachedImage(for: url)
+		let contains = imagePipeline.cache.containsCachedImage(for: url)
+		Self.cachedImageLookup[self.url]?[tile] = contains
+		return contains
 	}
 	
 	func cachedImage(for tile: MapTile) -> CGImage? {
