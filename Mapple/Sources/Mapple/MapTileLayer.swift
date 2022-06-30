@@ -28,6 +28,7 @@ class MapTileLayer: CALayer {
 	private(set) var tileSource: TileSource
 	private(set) var isLoaded = false
 	private(set) var isLoading = false
+	var isScheduledForLoading = false
 	
 	private var imageTask: ImageTask?
 	
@@ -64,6 +65,7 @@ class MapTileLayer: CALayer {
 		imageTask?.cancel()
 		imageTask = nil
 		isLoading = false
+		isScheduledForLoading = false
 	}
 	
 	var isAlmostLoaded: Bool {

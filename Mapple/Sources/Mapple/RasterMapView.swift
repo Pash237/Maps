@@ -179,7 +179,7 @@ public class RasterMapView: MapScrollView {
 			let tileLayers = layers(in: tileSource, sorted: true)
 			for tileLayer in tileLayers {
 				if tileLayer.tile.zoom != bestZoom {
-					let tileVisiblePart = tileLayer.frame.intersection(bounds)
+					let tileVisiblePart = tileLayer.frame.intersection(bounds.insetBy(dx: -margin.x/2, dy: -margin.y/2))
 					
 					// don't bother with tiles that are out of screen
 					if tileVisiblePart.width < 1 || tileVisiblePart.height < 1 {
@@ -311,11 +311,12 @@ public class RasterMapView: MapScrollView {
 		for tileSource in tileSources {
 			let tileLayers = layers(in: tileSource)
 			for layer in tileLayers {
-				if !layer.isLoaded && !layer.isLoading {
+				if !layer.isLoaded && !layer.isLoading && !layer.isScheduledForLoading {
 					if tileSource.hasCachedImage(for: layer.tile) {
 						// load right now if it's cached
 						layer.loadImage()
 					} else {
+						layer.isScheduledForLoading = true
 						DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {[weak self, weak layer] in
 							if let self = self, let layer = layer {
 								layer.loadImage(priority: self.priority(for: layer))
