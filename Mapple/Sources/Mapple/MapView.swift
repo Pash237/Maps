@@ -10,7 +10,7 @@ import Combine
 import CoreLocation
 import Nuke
 
-public class RasterMapView: MapScrollView {
+public class MapView: MapScrollView {
 	private let projection = SphericalMercator()
 	
 	private var tileLayersCache: [String: [MapTile: MapTileLayer]] = [:]
@@ -19,8 +19,8 @@ public class RasterMapView: MapScrollView {
 	
 	private var drawingLayersConfigs: [((CALayer?) -> (CALayer))] = []
 	private var drawingLayers: [CALayer] = []
-	private var drawedLayerOffset: CGPoint = .zero
-	private var drawedLayerZoom: Double = 11
+	private var drawnLayerOffset: CGPoint = .zero
+	private var drawnLayerZoom: Double = 11
 	
 	private var bag = Set<AnyCancellable>()
 	
@@ -253,8 +253,8 @@ public class RasterMapView: MapScrollView {
 	
 	private func positionDrawingLayers() {
 		for layer in drawingLayers {
-			layer.position = projection.convert(point: drawedLayerOffset, from: Double(drawedLayerZoom), to: zoom) - offset
-			let scale = pow(2.0, zoom - Double(drawedLayerZoom))
+			layer.position = projection.convert(point: drawnLayerOffset, from: Double(drawnLayerZoom), to: zoom) - offset
+			let scale = pow(2.0, zoom - Double(drawnLayerZoom))
 			layer.transform = CATransform3DMakeScale(scale, scale, 1)
 			layer.zPosition = 1
 		}
@@ -280,7 +280,7 @@ public class RasterMapView: MapScrollView {
 		startLoadingRequiredTiles()
 		prioritizeLoading()
 		
-		if drawedLayerZoom != zoom {
+		if drawnLayerZoom != zoom {
 			redrawLayers()
 		}
 		positionDrawingLayers()
@@ -304,7 +304,7 @@ public class RasterMapView: MapScrollView {
 			let _ = drawingLayersConfigs[i](layer)
 		}
 		
-		drawedLayerZoom = zoom
+		drawnLayerZoom = zoom
 	}
 	
 	private func startLoadingRequiredTiles() {
