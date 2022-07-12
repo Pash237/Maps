@@ -61,7 +61,7 @@ public class MapView: MapScrollView {
 	private var tileSize: Int { tileSources[0].tileSize }
 	
 	private func addRequiredTileLayers() {
-		let requiredZoom: Int = Int(zoom.rounded())
+		let requiredZoom: Int = max(1, Int(zoom.rounded()))
 		let requiredScale = pow(2.0, Double(requiredZoom) - zoom)
 		let size = Double(tileSize)
 		let margin = CGPoint(x: 200, y: 200)
