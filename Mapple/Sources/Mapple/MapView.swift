@@ -10,6 +10,13 @@ import Combine
 import CoreLocation
 import Nuke
 
+public enum ScrollReason {
+	case drag
+	case animation
+	case cameraUpdate
+	case layoutChange
+}
+
 public class MapView: MapScrollView {
 	private let projection = SphericalMercator()
 	
@@ -24,6 +31,8 @@ public class MapView: MapScrollView {
 	
 	private var bag = Set<AnyCancellable>()
 	
+	public var onScroll: ((ScrollReason) -> ())? = nil
+	
 	public var camera: Camera {
 		get {
 			Camera(center: coordinates(at: offset + bounds.center), zoom: zoom)
@@ -31,7 +40,8 @@ public class MapView: MapScrollView {
 		set {
 			zoom = newValue.zoom
 			offset = point(at: newValue.center) - bounds.center
-			didScroll()
+			updateLayers()
+			onScroll?(.cameraUpdate)
 		}
 	}
 	
@@ -40,7 +50,7 @@ public class MapView: MapScrollView {
 		
 		super.init(frame: frame)
 		
-		({ self.camera = camera })()
+		self.camera = camera
 
 		NotificationCenter.default.publisher(for: .mapTileLoaded)
 			.throttle(for: 0.01, scheduler: DispatchQueue.main, latest: true)
@@ -271,7 +281,12 @@ public class MapView: MapScrollView {
 		point(at: coordinates) - offset
 	}
 	
-	public override func didScroll() {
+	override func didScroll() {
+		updateLayers()
+		onScroll?(.drag)
+	}
+	
+	private func updateLayers() {
 		CATransaction.setDisableActions(true)
 		
 		addRequiredTileLayers()
@@ -288,6 +303,13 @@ public class MapView: MapScrollView {
 		CATransaction.setDisableActions(false)
 	}
 	
+	public override func layoutSubviews() {
+		super.layoutSubviews()
+		//TODO: called twice at init
+		updateLayers()
+		onScroll?(.layoutChange)
+	}
+	
 	@discardableResult
 	public func addMapLayer(_ configureLayer: @escaping ((CALayer?) -> (CALayer))) -> CALayer {
 		let drawingLayer = configureLayer(nil)
@@ -299,7 +321,7 @@ public class MapView: MapScrollView {
 		return drawingLayer
 	}
 	
-	private func redrawLayers() {
+	public func redrawLayers() {
 		for (i, layer) in drawingLayers.enumerated() {
 			let _ = drawingLayersConfigs[i](layer)
 		}

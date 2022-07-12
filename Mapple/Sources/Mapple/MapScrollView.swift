@@ -42,7 +42,7 @@ public class MapScrollView: UIView {
 		fatalError("init(coder:) has not been implemented")
 	}
 	
-	public func didScroll() {
+	func didScroll() {
 		
 	}
 	
