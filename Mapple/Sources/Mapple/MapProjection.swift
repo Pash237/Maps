@@ -7,13 +7,17 @@
 
 import Foundation
 
-protocol Projection {
-	func point(at zoom: Double, tileSize: Int, from coordinates: Coordinates) -> Point
-	func coordinates(from point: Point, at zoom: Double, tileSize: Int) -> Coordinates
+public typealias PointOffset = Point
+
+public protocol Projection {
+	func point(at zoom: Double, tileSize: Int, from coordinates: Coordinates) -> PointOffset
+	func coordinates(from point: PointOffset, at zoom: Double, tileSize: Int) -> Coordinates
 }
 
-struct SphericalMercator: Projection {
-	func point(at zoom: Double, tileSize: Int, from coordinates: Coordinates) -> Point {
+public struct SphericalMercator: Projection {
+	public init() {}
+	
+	public func point(at zoom: Double, tileSize: Int, from coordinates: Coordinates) -> PointOffset {
 		let tiles = pow(2, zoom)
 		let circumference = tiles * Double(tileSize)
 		let radius = circumference / (2 * .pi)
@@ -26,7 +30,7 @@ struct SphericalMercator: Projection {
 		return Point(x: x, y: y)
 	}
 	
-	func coordinates(from point: Point, at zoom: Double, tileSize: Int) -> Coordinates {
+	public func coordinates(from point: PointOffset, at zoom: Double, tileSize: Int) -> Coordinates {
 		let tiles = pow(2, zoom)
 		let circumference = tiles * Double(tileSize)
 		let radius = circumference / (2 * .pi)
@@ -40,9 +44,9 @@ struct SphericalMercator: Projection {
 }
 
 extension Projection {
-	func convert(point: Point, from fromZoom: Double, to toZoom: Double) -> Point {
+	func convert(point: PointOffset, from fromZoom: Double, to toZoom: Double) -> PointOffset {
 		let scale = pow(2.0, toZoom - fromZoom)
-		return Point(
+		return PointOffset(
 			x: point.x * scale,
 			y: point.y * scale
 		)

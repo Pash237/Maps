@@ -17,42 +17,103 @@ public func -(lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> CLLoc
 	CLLocationCoordinate2D(latitude: lhs.latitude - rhs.latitude, longitude: lhs.longitude - rhs.longitude)
 }
 
-public extension Coordinates {
-	init(_ latitude: CLLocationDegrees, _ longitude: CLLocationDegrees) {
+extension Coordinates: Hashable {
+	public init(_ latitude: CLLocationDegrees, _ longitude: CLLocationDegrees) {
 		self.init(latitude: latitude, longitude: longitude)
+	}
+	
+	
+	public static func ==(lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool {
+		lhs.longitude == rhs.longitude && lhs.latitude == rhs.latitude
+	}
+	
+	public func hash(into hasher: inout Hasher) {
+		hasher.combine(latitude)
+		hasher.combine(longitude)
 	}
 }
 
-public struct CoordinateBounds {
+public struct CoordinateBounds: Codable, Hashable, Equatable, CustomStringConvertible {
 	var northeast: Coordinates
 	var southwest: Coordinates
-}
-
-public extension Array where Element == Coordinates {
-	func bounds() -> CoordinateBounds {
+	
+	public init(northeast: Coordinates, southwest: Coordinates) {
+		self.northeast = northeast
+		self.southwest = southwest
+	}
+	
+	public init(coordinates: [Coordinates]) {
 		//TODO: Chukotka will have troubles if points contains both -179 and 179 degrees
+		
+		guard !coordinates.isEmpty else {
+			self.init(northeast: Coordinates(85, 179), southwest: Coordinates(-85, -179))
+			return
+		}
 		
 		var minLatitude = Double.greatestFiniteMagnitude
 		var maxLatitude = -Double.greatestFiniteMagnitude
 		var minLongitude = Double.greatestFiniteMagnitude
 		var maxLongitude = -Double.greatestFiniteMagnitude
 		
-		for coordinates in self {
-			if coordinates.latitude < minLatitude {
-				minLatitude = coordinates.latitude
+		for coordinate in coordinates {
+			if coordinate.latitude < minLatitude {
+				minLatitude = coordinate.latitude
 			}
-			if coordinates.latitude > maxLatitude {
-				maxLatitude = coordinates.latitude
+			if coordinate.latitude > maxLatitude {
+				maxLatitude = coordinate.latitude
 			}
-			if coordinates.longitude < minLongitude {
-				minLongitude = coordinates.longitude
+			if coordinate.longitude < minLongitude {
+				minLongitude = coordinate.longitude
 			}
-			if coordinates.longitude > maxLongitude {
-				maxLongitude = coordinates.longitude
+			if coordinate.longitude > maxLongitude {
+				maxLongitude = coordinate.longitude
 			}
 		}
 		
-		return CoordinateBounds(northeast: Coordinates(latitude: maxLatitude, longitude: minLongitude),
-								southwest: Coordinates(latitude: minLatitude, longitude: maxLongitude))
+		self.init(northeast: Coordinates(latitude: maxLatitude, longitude: maxLongitude),
+				  southwest: Coordinates(latitude: minLatitude, longitude: minLongitude))
+	}
+	
+	public var northwest: Coordinates {
+		Coordinates(northeast.latitude, southwest.longitude)
+	}
+	
+	public var southeast: Coordinates {
+		Coordinates(southwest.latitude, northeast.longitude)
+	}
+	
+	public func contains(_ coordinates: Coordinates) -> Bool {
+		let latitude = coordinates.latitude
+		let longitude = coordinates.longitude.remainder(dividingBy: 360.0)
+		
+		return latitude > min(northeast.latitude, southwest.latitude) && latitude < max(northeast.latitude, southwest.latitude)
+			   &&
+			   longitude > min(northeast.longitude, southwest.longitude) && longitude < max(northeast.longitude, southwest.longitude)
+	}
+		
+	public var description: String {
+		"(\(southwest.latitude), \(southwest.longitude)) — (\(northeast.latitude), \(northeast.longitude))"
+	}
+	
+	public var center: Coordinates {
+		Coordinates(
+			(northeast.latitude + southwest.latitude)/2,
+			(northeast.longitude + southwest.longitude)/2
+		)
+	}
+}
+
+}
+
+public extension Array where Element == Coordinates {
+	func centroid() -> Coordinates {
+		guard !isEmpty else {
+			return Coordinates(0, 0)
+		}
+		
+		return Coordinates(
+			(map {$0.latitude}.reduce(0, +))/Double(count),
+			(map {$0.longitude}.reduce(0, +))/Double(count)
+		)
 	}
 }

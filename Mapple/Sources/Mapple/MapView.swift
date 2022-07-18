@@ -35,7 +35,7 @@ public class MapView: MapScrollView {
 	
 	public var camera: Camera {
 		get {
-			Camera(center: coordinates(at: offset + bounds.center), zoom: zoom)
+			Camera(center: coordinates(at: bounds.center), zoom: zoom)
 		}
 		set {
 			zoom = newValue.zoom
@@ -271,7 +271,7 @@ public class MapView: MapScrollView {
 	}
 
 	public func coordinates(at screenPoint: Point) -> Coordinates {
-		projection.coordinates(from: screenPoint, at: zoom, tileSize: tileSize)
+		projection.coordinates(from: offset + screenPoint, at: zoom, tileSize: tileSize)
 	}
 	
 	public func point(at coordinates: Coordinates) -> Point {
@@ -279,6 +279,11 @@ public class MapView: MapScrollView {
 	}
 	public func screenPoint(at coordinates: Coordinates) -> Point {
 		point(at: coordinates) - offset
+	}
+	
+	public var coordinateBounds: CoordinateBounds {
+		CoordinateBounds(northeast: coordinates(at: .zero),
+						 southwest: coordinates(at: CGPoint(bounds.width, bounds.height)))
 	}
 	
 	override func didScroll() {
