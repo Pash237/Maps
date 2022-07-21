@@ -41,13 +41,19 @@ public class MapView: MapScrollView {
 			return Camera(center: coordinates(at: bounds.center), zoom: zoom)
 		}
 		set {
+			var value = newValue
+			if newValue.zoom == zoom && animation.toValue.zoom != 0 {
+				// if we doesn't seem to change zoom, use target zoom value
+				value.zoom = animation.toValue.zoom
+			}
+			
 			if animation.hasResolved() {
-				animation.toValue = newValue
+				animation.toValue = value
 				animation.stop(resolveImmediately: true, postValueChanged: true)
 			} else {
 				// if we have ongoing animation, redirect it to a new location
 				//TODO: this may result in infinite animation if camera updates are more frequent than animation duration
-				animation.toValue = newValue
+				animation.toValue = value
 			}
 		}
 	}
