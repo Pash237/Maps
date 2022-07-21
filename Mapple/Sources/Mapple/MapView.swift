@@ -9,6 +9,7 @@ import UIKit
 import Combine
 import CoreLocation
 import Nuke
+import Motion
 
 public enum ScrollReason {
 	case drag
@@ -33,15 +34,21 @@ public class MapView: MapScrollView {
 	
 	public var onScroll: ((ScrollReason) -> ())? = nil
 	
+	private var animation = SpringAnimation<Camera>(response: 0.4, dampingRatio: 1.0)
+	
 	public var camera: Camera {
 		get {
-			Camera(center: coordinates(at: bounds.center), zoom: zoom)
+			return Camera(center: coordinates(at: bounds.center), zoom: zoom)
 		}
 		set {
-			zoom = newValue.zoom
-			offset = point(at: newValue.center) - bounds.center
-			updateLayers()
-			onScroll?(.cameraUpdate)
+			if animation.hasResolved() {
+				animation.toValue = newValue
+				animation.stop(resolveImmediately: true, postValueChanged: true)
+			} else {
+				// if we have ongoing animation, redirect it to a new location
+				//TODO: this may result in infinite animation if camera updates are more frequent than animation duration
+				animation.toValue = newValue
+			}
 		}
 	}
 	
@@ -51,13 +58,17 @@ public class MapView: MapScrollView {
 		super.init(frame: frame)
 		
 		self.camera = camera
+		updateOffset(to: camera)
 
 		NotificationCenter.default.publisher(for: .mapTileLoaded)
-			.throttle(for: 0.01, scheduler: DispatchQueue.main, latest: true)
+			.throttle(for: 0.005, scheduler: DispatchQueue.main, latest: true)
 			.sink() {[weak self] _ in
 				self?.removeUnusedTileLayers()
 			}
 			.store(in: &bag)
+		
+		animation.resolvingEpsilon = 0.0001
+		animation.onValueChanged { [weak self] in self?.updateOffset(to: $0) }
 	}
 
 	public convenience init(frame: CGRect, tileSource: TileSource, camera: Camera) {
@@ -66,6 +77,13 @@ public class MapView: MapScrollView {
 	
 	required init?(coder: NSCoder) {
 		fatalError("init(coder:) has not been implemented")
+	}
+	
+	private func updateOffset(to camera: Camera) {
+		zoom = camera.zoom
+		offset = point(at: camera.center) - bounds.center
+		updateLayers()
+		onScroll?(.cameraUpdate)
 	}
 	
 	private var tileSize: Int { tileSources[0].tileSize }
@@ -287,6 +305,7 @@ public class MapView: MapScrollView {
 	}
 	
 	override func didScroll() {
+		animation.stop()
 		updateLayers()
 		onScroll?(.drag)
 	}
@@ -380,5 +399,21 @@ public class MapView: MapScrollView {
 			}
 		}
 	}
+	
+	public func setCamera(_ newCamera: Camera, animated: Bool = true) {
+		guard animated else {
+			camera = newCamera
+			return
+		}
+		
+		animation.updateValue(to: camera)
+		animation.toValue = newCamera
+		
+		animation.start()
+	}
+}
+
+
+
 }
 }

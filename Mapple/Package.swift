@@ -15,12 +15,14 @@ let package = Package(
     ],
     dependencies: [
 		.package(url: "https://github.com/kean/Nuke", from: "10.11.0"),
+		.package(url: "https://github.com/b3ll/Motion", from: "0.1.0"),
     ],
     targets: [
         .target(
             name: "Mapple",
             dependencies: [
 				.product(name: "Nuke", package: "Nuke"),
+				.product(name: "Motion", package: "Motion"),
 			])
     ]
 )

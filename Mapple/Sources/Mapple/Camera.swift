@@ -21,7 +21,6 @@ public struct Camera: Codable {
 		let maxZoom = 20.0
 		let boundsAtMaxZoom = projection.point(at: maxZoom, tileSize: 256, from: coordinateBounds.southeast) - projection.point(at: maxZoom, tileSize: 256, from: coordinateBounds.northwest)
 		
-		
 		let scale: Double = max(
 			boundsAtMaxZoom.x / (bounds.width - padding*2),
 			boundsAtMaxZoom.y / (bounds.height - padding*2)
