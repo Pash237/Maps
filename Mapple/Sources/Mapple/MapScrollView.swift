@@ -205,7 +205,11 @@ public class MapScrollView: UIView {
 		displayLink?.add(to: .current, forMode: .common)
 	}
 	
-	private func stopDecelerating() {
+	func stopDecelerating() {
+		guard displayLink != nil else {
+			return
+		}
+		targetOffset = offset
 		displayLink?.invalidate()
 		displayLink = nil
 	}

@@ -86,6 +86,7 @@ public class MapView: MapScrollView {
 	}
 	
 	private func updateOffset(to camera: Camera) {
+		stopDecelerating()
 		zoom = camera.zoom
 		offset = point(at: camera.center) - bounds.center
 		updateLayers()
