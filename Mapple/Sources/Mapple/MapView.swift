@@ -334,11 +334,26 @@ public class MapView: MapScrollView {
 		CATransaction.setDisableActions(false)
 	}
 	
+	
+	private var oldBounds: CGRect = .zero
 	public override func layoutSubviews() {
 		super.layoutSubviews()
+		
+		guard bounds.width != 0 && bounds.height != 0 else {
+			return
+		}
+
+		if oldBounds != .zero && bounds != oldBounds {
+			let cameraAtOldCenter = Camera(center: coordinates(at: oldBounds.center), zoom: zoom)
+			setCamera(cameraAtOldCenter, animated: false)
+		}
+		
 		//TODO: called twice at init
+		
 		updateLayers()
 		onScroll?(.layoutChange)
+		
+		oldBounds = bounds
 	}
 	
 	@discardableResult
