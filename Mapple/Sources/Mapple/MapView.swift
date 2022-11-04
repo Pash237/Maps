@@ -21,7 +21,7 @@ public enum ScrollReason {
 public class MapView: MapScrollView {
 	private let projection = SphericalMercator()
 	
-	private var tileLayersCache: [String: [MapTile: MapTileLayer]] = [:]
+	private var tileLayersCache: [TileSource: [MapTile: MapTileLayer]] = [:]
 	
 	public var tileSources: [TileSource] {
 		didSet {
@@ -111,8 +111,8 @@ public class MapView: MapScrollView {
 		let max = (topLeft + Point(x: bounds.width, y: bounds.height)*requiredScale + margin*2*requiredScale) / size
 		
 		for tileSource in tileSources {
-			if tileLayersCache[tileSource.url] == nil {
-				tileLayersCache[tileSource.url] = [:]
+			if tileLayersCache[tileSource] == nil {
+				tileLayersCache[tileSource] = [:]
 			}
 		}
 		
@@ -121,10 +121,10 @@ public class MapView: MapScrollView {
 				for y in Int(min.y)...Int(max.y) {
 					let tile = MapTile(x: x, y: y, zoom: requiredZoom, size: tileSize)
 					
-					if tileLayersCache[tileSource.url]![tile] == nil {
+					if tileLayersCache[tileSource]![tile] == nil {
 						let layer = MapTileLayer(tile: tile, tileSource: tileSource)
 						self.layer.addSublayer(layer)
-						tileLayersCache[tileSource.url]![tile] = layer
+						tileLayersCache[tileSource]![tile] = layer
 					}
 					
 					if !tileSource.hasCachedImage(for: tile) {
@@ -136,13 +136,13 @@ public class MapView: MapScrollView {
 													 y: tile.y/multiplier,
 													 zoom: smallerZoom,
 													 size: tileSize)
-							if tileLayersCache[tileSource.url]![largerTile] != nil && tileSource.hasCachedImage(for: largerTile) {
+							if tileLayersCache[tileSource]![largerTile] != nil && tileSource.hasCachedImage(for: largerTile) {
 								break
 							}
 							if tileSource.hasCachedImage(for: largerTile) {
 								let layer = MapTileLayer(tile: largerTile, tileSource: tileSource)
 								self.layer.addSublayer(layer)
-								tileLayersCache[tileSource.url]![largerTile] = layer
+								tileLayersCache[tileSource]![largerTile] = layer
 								break
 							}
 						}
@@ -153,14 +153,14 @@ public class MapView: MapScrollView {
 	}
 	
 	private func remove(layer tileLayer: MapTileLayer, in tileSource: TileSource) {
-		tileLayersCache[tileSource.url]?.removeValue(forKey: tileLayer.tile)
+		tileLayersCache[tileSource]?.removeValue(forKey: tileLayer.tile)
 		layer.sublayers?.remove(object: tileLayer)
 	}
 	
 	private var bestZoom: Int { Int(zoom.rounded()) }
 	
 	private func layers(in tileSource: TileSource, sorted: Bool = false) -> [MapTileLayer] {
-		let layers = (tileLayersCache[tileSource.url] ?? [:]).values
+		let layers = (tileLayersCache[tileSource] ?? [:]).values
 		if sorted {
 			return layers.sorted {
 				abs($0.tile.zoom - bestZoom) > abs($1.tile.zoom - bestZoom)
@@ -177,9 +177,9 @@ public class MapView: MapScrollView {
 				remove(layer: tileLayer, in: tileLayer.tileSource)
 			}
 		}
-		for key in tileLayersCache.keys {
-			if !tileSources.contains(where: {$0.url == key}) {
-				tileLayersCache[key] = nil
+		for tileSource in tileLayersCache.keys {
+			if !tileSources.contains(tileSource) {
+				tileLayersCache[tileSource] = nil
 			}
 		}
 	}

@@ -9,16 +9,16 @@ import Foundation
 import UIKit
 import Nuke
 
-public struct TileSource: Equatable {
-	public var title: String
-	public var url: String
-	public var tileSize: Int = 256	//size in points on screen
-	public var minZoom: Int = 0
-	public var maxZoom: Int = 22
+public struct TileSource: Equatable, Hashable {
+	public let title: String
+	public let url: String
+	public let tileSize: Int	//size in points on screen
+	public let minZoom: Int
+	public let maxZoom: Int
 	
 	private let imagePipeline: ImagePipeline
 	
-	private static var cachedImageLookup: [String:[MapTile:Bool]] = [:]
+	private static var cachedImageLookup: [TileSource:[MapTile:Bool]] = [:]
 
 	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 0, maxZoom: Int = 22, imagePipeline: ImagePipeline = .defaultTileLoader) {
 		self.title = title
@@ -28,8 +28,8 @@ public struct TileSource: Equatable {
 		self.maxZoom = maxZoom
 		self.imagePipeline = imagePipeline
 		
-		if Self.cachedImageLookup[url] == nil {
-			Self.cachedImageLookup[url] = [:]
+		if Self.cachedImageLookup[self] == nil {
+			Self.cachedImageLookup[self] = [:]
 		}
 	}
 
@@ -48,25 +48,29 @@ public struct TileSource: Equatable {
 			.replacingOccurrences(of: "{1234}", with: ["1", "2", "3", "4"][(tile.x + tile.y + tile.zoom) % 4])
 		)!
 	}
+
+	public func hash(into hasher: inout Hasher) {
+		hasher.combine(url.hash)
+	}
 	
 	func loadImage(for tile: MapTile, completion: @escaping ((_ result: Result<ImageResponse, ImagePipeline.Error>) -> Void)) -> ImageTask {
 		let url = url(for: tile)
 		return imagePipeline.loadImage(with: url, completion: {result in
 			if case .success = result {
-				Self.cachedImageLookup[self.url]?[tile] = true
+				Self.cachedImageLookup[self]?[tile] = true
 			}
 			completion(result)
 		})
 	}
 	
 	func hasCachedImage(for tile: MapTile) -> Bool {
-		if let cached = Self.cachedImageLookup[url]?[tile] {
+		if let cached = Self.cachedImageLookup[self]?[tile] {
 			return cached
 		}
 		
 		let url = url(for: tile)
 		let contains = imagePipeline.cache.containsCachedImage(for: ImageRequest(url: url))
-		Self.cachedImageLookup[self.url]?[tile] = contains
+		Self.cachedImageLookup[self]?[tile] = contains
 		return contains
 	}
 	
