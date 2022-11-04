@@ -8,7 +8,7 @@
 import UIKit
 import Nuke
 
-struct MapTile: Equatable, Hashable {
+public struct MapTile: Equatable, Hashable {
 	var x: Int
 	var y: Int
 	var zoom: Int
@@ -16,6 +16,13 @@ struct MapTile: Equatable, Hashable {
 	
 	var offset: Point {
 		Point(x: x * size, y: y * size)
+	}
+	
+	public init(x: Int, y: Int, zoom: Int, size: Int = 512) {
+		self.x = x
+		self.y = y
+		self.zoom = zoom
+		self.size = size
 	}
 }
 

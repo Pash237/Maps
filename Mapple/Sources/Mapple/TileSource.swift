@@ -33,7 +33,7 @@ public struct TileSource {
 		}
 	}
 
-	func url(for tile: MapTile) -> URL {
+	public func url(for tile: MapTile) -> URL {
 		URL(string: url
 			.replacingOccurrences(of: "{x}", with: "\(tile.x)")
 			.replacingOccurrences(of: "{y}", with: "\(tile.y)")
