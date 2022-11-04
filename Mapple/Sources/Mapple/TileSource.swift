@@ -58,14 +58,15 @@ public struct TileSource {
 		}
 		
 		let url = url(for: tile)
-		let contains = imagePipeline.cache.containsCachedImage(for: url)
+		let contains = imagePipeline.cache.containsCachedImage(for: ImageRequest(url: url))
 		Self.cachedImageLookup[self.url]?[tile] = contains
 		return contains
 	}
 	
 	func cachedImage(for tile: MapTile) -> CGImage? {
 		let url = url(for: tile)
-		return imagePipeline.cache.cachedImage(for: url)?.image.cgImage
+		return imagePipeline.cache.cachedImage(for: ImageRequest(url: url))?.image.cgImage
+	}
 	}
 }
 
