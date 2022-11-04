@@ -9,7 +9,7 @@ import Foundation
 import UIKit
 import Nuke
 
-public struct TileSource {
+public struct TileSource: Equatable {
 	public var title: String
 	public var url: String
 	public var tileSize: Int = 256	//size in points on screen
@@ -39,6 +39,13 @@ public struct TileSource {
 			.replacingOccurrences(of: "{y}", with: "\(tile.y)")
 			.replacingOccurrences(of: "{z}", with: "\(tile.zoom)")
 			.replacingOccurrences(of: "{ratio}", with: UIScreen.main.scale > 1 ? "@2x" : "")
+			.replacingOccurrences(of: "{server}", with: ["a", "b", "c"][(tile.x + tile.y + tile.zoom) % 3])
+			.replacingOccurrences(of: "{abc}", with: ["a", "b", "c"][(tile.x + tile.y + tile.zoom) % 3])
+			.replacingOccurrences(of: "{abcd}", with: ["a", "b", "c", "d"][(tile.x + tile.y + tile.zoom) % 4])
+			.replacingOccurrences(of: "{012}", with: ["0", "1", "2"][(tile.x + tile.y + tile.zoom) % 3])
+			.replacingOccurrences(of: "{0123}", with: ["0", "1", "2", "3"][(tile.x + tile.y + tile.zoom) % 4])
+			.replacingOccurrences(of: "{123}", with: ["1", "2", "3"][(tile.x + tile.y + tile.zoom) % 3])
+			.replacingOccurrences(of: "{1234}", with: ["1", "2", "3", "4"][(tile.x + tile.y + tile.zoom) % 4])
 		)!
 	}
 	
@@ -67,6 +74,9 @@ public struct TileSource {
 		let url = url(for: tile)
 		return imagePipeline.cache.cachedImage(for: ImageRequest(url: url))?.image.cgImage
 	}
+	
+	public static func == (lhs: TileSource, rhs: TileSource) -> Bool {
+		lhs.title == rhs.title && lhs.url == rhs.url
 	}
 }
 
