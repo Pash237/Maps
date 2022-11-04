@@ -23,7 +23,12 @@ public class MapView: MapScrollView {
 	
 	private var tileLayersCache: [String: [MapTile: MapTileLayer]] = [:]
 	
-	public var tileSources: [TileSource]
+	public var tileSources: [TileSource] {
+		didSet {
+			removeLayersFromUnusedTileSources()
+			updateLayers()
+		}
+	}
 	
 	private var drawingLayersConfigs: [((CALayer?) -> (CALayer))] = []
 	private var drawingLayers: [CALayer] = []
@@ -162,6 +167,20 @@ public class MapView: MapScrollView {
 			}
 		} else {
 			return Array(layers)
+		}
+	}
+	
+	private func removeLayersFromUnusedTileSources() {
+		let allTileLayers = layer.sublayers?.compactMap( {$0 as? MapTileLayer } ) ?? []
+		for tileLayer in allTileLayers {
+			if !tileSources.contains(tileLayer.tileSource) {
+				remove(layer: tileLayer, in: tileLayer.tileSource)
+			}
+		}
+		for key in tileLayersCache.keys {
+			if !tileSources.contains(where: {$0.url == key}) {
+				tileLayersCache[key] = nil
+			}
 		}
 	}
 	
