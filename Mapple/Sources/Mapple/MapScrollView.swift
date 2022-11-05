@@ -25,6 +25,8 @@ public class MapScrollView: UIView {
 	private var lastTouchTimestamp: TimeInterval = 0
 	private var lastTouchLocation: CGPoint = .zero
 	private var lastTouchTravelDistance: CGFloat = 0
+	private var previousTouchEndCentroid: CGPoint?
+	private var previousTouchTravelDistance: CGFloat = 0
 	private var doubleTapDragZooming = false
 	private var doubleTapDragZoomCenter: CGPoint = .zero
 	private let doubleTapDragZoomDelay: TimeInterval = 0.3
@@ -121,6 +123,7 @@ public class MapScrollView: UIView {
 			return
 		}
 		let centroid = event.centroid(in: self)
+		let timeSincePreviousTap = event.timestamp - lastTouchTimestamp
 		
 		previousCentroid = centroid
 		if event.activeTouches.count == 1 {
@@ -132,7 +135,7 @@ public class MapScrollView: UIView {
 		}
 		
 		// detect double tap
-		if event.activeTouches.count == 1 && lastTouchTravelDistance < 50 && event.timestamp - lastTouchTimestamp < doubleTapDragZoomDelay && (centroid - lastTouchLocation).length < 50 {
+		if event.activeTouches.count == 1 && lastTouchTravelDistance < 50 && lastTouchTimestamp < doubleTapDragZoomDelay && (centroid - lastTouchLocation).length < 50 {
 			doubleTapDragZooming = true
 			doubleTapDragZoomCenter = centroid
 		} else {
@@ -143,9 +146,17 @@ public class MapScrollView: UIView {
 		velocity = .zero
 		centroidToCalculateVelocity = centroid
 		timestampToCalculateVelocity = event.timestamp
+		previousTouchTravelDistance = lastTouchTravelDistance
 		lastTouchTravelDistance = 0
 		
-		animation.stop()
+		// stop any animation immediately when tapping on the map
+		let distanceBetweenLastTwoTouches = (previousTouchEndCentroid ?? .zero).distance(to: previousCentroid ?? .zero)
+		if timeSincePreviousTap < doubleTapDragZoomDelay && distanceBetweenLastTwoTouches < 30 {
+			// but if we're zooming in with double-tap gesture, we might want to triple-tap,
+			// and this zoom animation should resume without stopping
+		} else {
+			animation.stop()
+		}
 	}
 	
 	public override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -237,6 +248,13 @@ public class MapScrollView: UIView {
 		}
 		
 		if allTouches.isEmpty {
+			let timeSincePreviousTap = event.timestamp - lastTouchTimestamp
+			let distanceBetweenLastTwoTouches = (previousTouchEndCentroid ?? .zero).distance(to: previousCentroid ?? .zero)
+			if lastTouchTravelDistance < 30 && previousTouchTravelDistance < 30 && timeSincePreviousTap < doubleTapDragZoomDelay && distanceBetweenLastTwoTouches < 30 {
+				let zoomCenterOnMap = offset + bounds.center + ((previousCentroid ?? bounds.center) - bounds.center) * 0.5
+				
+				setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom + 1))
+			}
 			if velocity.length < 400 {
 				velocity = .zero
 			}
@@ -246,6 +264,7 @@ public class MapScrollView: UIView {
 				startDecelerating()
 			}
 			
+			previousTouchEndCentroid = previousCentroid
 			previousCentroid = nil
 			
 			lastTouchTimestamp = event.timestamp
