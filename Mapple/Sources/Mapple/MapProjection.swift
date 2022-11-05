@@ -10,14 +10,19 @@ import Foundation
 public typealias PointOffset = Point
 
 public protocol Projection {
-	func point(at zoom: Double, tileSize: Int, from coordinates: Coordinates) -> PointOffset
-	func coordinates(from point: PointOffset, at zoom: Double, tileSize: Int) -> Coordinates
+	var tileSize: Int { get }
+	func point(at zoom: Double, from coordinates: Coordinates) -> PointOffset
+	func coordinates(from point: PointOffset, at zoom: Double) -> Coordinates
 }
 
 public struct SphericalMercator: Projection {
-	public init() {}
+	public let tileSize: Int
 	
-	public func point(at zoom: Double, tileSize: Int, from coordinates: Coordinates) -> PointOffset {
+	public init(tileSize: Int = 256) {
+		self.tileSize = tileSize
+	}
+	
+	public func point(at zoom: Double, from coordinates: Coordinates) -> PointOffset {
 		let tiles = pow(2, zoom)
 		let circumference = tiles * Double(tileSize)
 		let radius = circumference / (2 * .pi)
@@ -30,7 +35,7 @@ public struct SphericalMercator: Projection {
 		return Point(x: x, y: y)
 	}
 	
-	public func coordinates(from point: PointOffset, at zoom: Double, tileSize: Int) -> Coordinates {
+	public func coordinates(from point: PointOffset, at zoom: Double) -> Coordinates {
 		let tiles = pow(2, zoom)
 		let circumference = tiles * Double(tileSize)
 		let radius = circumference / (2 * .pi)

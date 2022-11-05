@@ -19,7 +19,7 @@ public struct Camera: Codable {
 	
 	public static func fitting(_ coordinateBounds: CoordinateBounds, with bounds: CGRect, padding: Double = 0, projection: Projection = SphericalMercator()) -> Camera {
 		let maxZoom = 20.0
-		let boundsAtMaxZoom = projection.point(at: maxZoom, tileSize: 256, from: coordinateBounds.southeast) - projection.point(at: maxZoom, tileSize: 256, from: coordinateBounds.northwest)
+		let boundsAtMaxZoom = projection.point(at: maxZoom, from: coordinateBounds.southeast) - projection.point(at: maxZoom, from: coordinateBounds.northwest)
 		
 		let scale: Double = max(
 			boundsAtMaxZoom.x / (bounds.width - padding*2),
@@ -37,14 +37,14 @@ public struct Camera: Codable {
 		return Camera.fitting(CoordinateBounds(coordinates: coordinates), with: bounds, padding: padding, projection: projection)
 	}
 	
-	public func coordinateBounds(with bounds: CGRect, projection: Projection = SphericalMercator(), tileSize: Int = 256) -> CoordinateBounds {
-		let offset = projection.point(at: zoom, tileSize: tileSize, from: center)
+	public func coordinateBounds(with bounds: CGRect, projection: Projection = SphericalMercator()) -> CoordinateBounds {
+		let offset = projection.point(at: zoom, from: center)
 		let topLeft = offset - bounds.size/2
 		let bottomRight = offset + bounds.size/2
 		
 		return CoordinateBounds(
-			northeast: projection.coordinates(from: topLeft, at: zoom, tileSize: tileSize),
-			southwest: projection.coordinates(from: bottomRight, at: zoom, tileSize: tileSize)
+			northeast: projection.coordinates(from: topLeft, at: zoom),
+			southwest: projection.coordinates(from: bottomRight, at: zoom)
 		)
 	}
 }
