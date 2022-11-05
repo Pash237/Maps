@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import Motion
 
 public class MapScrollView: UIView {
 	public var offset: Point = .zero
@@ -31,11 +32,78 @@ public class MapScrollView: UIView {
 	
 	private var touchesBeganTimestamps: [Int: TimeInterval] = [:]
 	
-	override init(frame: CGRect) {
+	private var animation = SpringAnimation<Camera>(response: 0.4, dampingRatio: 1.0)
+	
+	let projection = SphericalMercator()
+	
+	public var camera: Camera {
+		get {
+			return Camera(center: coordinates(at: bounds.center), zoom: zoom)
+		}
+		set {
+			var value = newValue
+			if newValue.zoom == zoom && animation.toValue.zoom != 0 {
+				// if we doesn't seem to change zoom, use target zoom value
+				value.zoom = animation.toValue.zoom
+			}
+			
+			if animation.hasResolved() {
+				animation.toValue = value
+				animation.stop(resolveImmediately: true, postValueChanged: true)
+			} else {
+				// if we have ongoing animation, redirect it to a new location
+				//TODO: this may result in infinite animation if camera updates are more frequent than animation duration
+				animation.toValue = value
+			}
+		}
+	}
+	
+	init(frame: CGRect, camera: Camera) {
 		super.init(frame: frame)
 		
 		isMultipleTouchEnabled = true
 		backgroundColor = .black
+
+		self.camera = camera
+		updateOffset(to: camera)
+		
+		animation.resolvingEpsilon = 0.0001
+		animation.onValueChanged { [weak self] in self?.updateOffset(to: $0) }
+	}
+	
+	
+	func updateOffset(to camera: Camera) {
+		stopDecelerating()
+		zoom = camera.zoom
+		offset = point(at: camera.center) - bounds.center
+	}
+	
+	public func setCamera(_ newCamera: Camera, animated: Bool = true) {
+		guard animated else {
+			camera = newCamera
+			return
+		}
+		
+		animation.updateValue(to: camera)
+		animation.toValue = newCamera
+		
+		animation.start()
+	}
+	
+	public func coordinates(at screenPoint: Point) -> Coordinates {
+		projection.coordinates(from: offset + screenPoint, at: zoom)
+	}
+	
+	public func point(at coordinates: Coordinates) -> Point {
+		projection.point(at: zoom, from: coordinates)
+	}
+	public func screenPoint(at coordinates: Coordinates) -> Point {
+		point(at: coordinates) - offset
+	}
+	
+	public var coordinateBounds: CoordinateBounds {
+		CoordinateBounds(northeast: coordinates(at: .zero),
+						 southwest: coordinates(at: CGPoint(bounds.width, bounds.height)))
 	}
 	
 	required init?(coder: NSCoder) {
@@ -76,6 +144,8 @@ public class MapScrollView: UIView {
 		centroidToCalculateVelocity = centroid
 		timestampToCalculateVelocity = event.timestamp
 		lastTouchTravelDistance = 0
+		
+		animation.stop()
 	}
 	
 	public override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
