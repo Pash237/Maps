@@ -144,7 +144,7 @@ public class MapScrollView: UIView {
 			doubleTapDragZooming = false
 		}
 		
-		if event.activeTouches.count == 2 && lastTouchTravelDistance < 30 {
+		if event.activeTouches.count == 2 && (lastTouchTravelDistance < 30 || touches.count == 2) {
 			// detect possible two-finger tap
 			twoFingerTapTimestamp = event.timestamp
 		} else {
