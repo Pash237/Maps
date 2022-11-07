@@ -256,20 +256,20 @@ public class MapScrollView: UIView {
 			return
 		}
 		
-		let allTouches = event.activeTouches
+		let activeTouches = event.activeTouches
 		
 		// zoom out animated with two finger tap gesture
-		if let twoFingerTapTimestamp = twoFingerTapTimestamp, allTouches.isEmpty, event.timestamp - twoFingerTapTimestamp < 0.3, twoFingerTravelDistance < 4 {
+		if let twoFingerTapTimestamp = twoFingerTapTimestamp, activeTouches.isEmpty, event.timestamp - twoFingerTapTimestamp < 0.3, twoFingerTravelDistance < 4 {
 			let zoomCenterOnMap = offset + bounds.center + ((previousCentroid ?? bounds.center) - bounds.center) * 0.5
 			
 			setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom - 1))
 		}
 		
-		if allTouches.count < 2 {
+		if activeTouches.count < 2 {
 			previousDistance = nil
 		}
 		
-		if allTouches.isEmpty {
+		if activeTouches.isEmpty {
 			// zoom in animated with double-tap gesture
 			let timeSincePreviousTap = event.timestamp - lastTouchTimestamp
 			let distanceBetweenLastTwoTouches = (previousTouchEndCentroid ?? .zero).distance(to: previousCentroid ?? .zero)
@@ -296,6 +296,8 @@ public class MapScrollView: UIView {
 			lastTouchTimestamp = event.timestamp
 			lastTouchLocation = touches.first?.location(in: self) ?? .zero
 			lastTouchTravelDistance = 0
+		} else {
+			previousCentroid = activeTouches.centroid(in: self)
 		}
 	}
 	
