@@ -17,6 +17,7 @@ public struct TileSource: Equatable, Hashable {
 	public let maxZoom: Int
 	
 	private let imagePipeline: ImagePipeline
+	private let hash: Int
 	
 	private static var cachedImageLookup: [TileSource:[MapTile:Bool]] = [:]
 
@@ -27,6 +28,7 @@ public struct TileSource: Equatable, Hashable {
 		self.minZoom = minZoom
 		self.maxZoom = maxZoom
 		self.imagePipeline = imagePipeline
+		self.hash = url.hash
 		
 		if Self.cachedImageLookup[self] == nil {
 			Self.cachedImageLookup[self] = [:]
@@ -50,7 +52,7 @@ public struct TileSource: Equatable, Hashable {
 	}
 
 	public func hash(into hasher: inout Hasher) {
-		hasher.combine(url.hash)
+		hasher.combine(hash)
 	}
 	
 	func loadImage(for tile: MapTile, completion: @escaping ((_ result: Result<ImageResponse, ImagePipeline.Error>) -> Void)) -> ImageTask {
@@ -80,7 +82,7 @@ public struct TileSource: Equatable, Hashable {
 	}
 	
 	public static func == (lhs: TileSource, rhs: TileSource) -> Bool {
-		lhs.title == rhs.title && lhs.url == rhs.url
+		lhs.hash == rhs.hash
 	}
 }
 
