@@ -79,6 +79,9 @@ public class MapView: MapScrollView {
 		for tileSource in tileSources {
 			for x in Int(min.x)...Int(max.x) {
 				for y in Int(min.y)...Int(max.y) {
+					guard requiredZoom >= 0, x >= 0, y >= 0 else {
+						continue
+					}
 					let tile = MapTile(x: x, y: y, zoom: requiredZoom, size: tileSize)
 					
 					if tileLayersCache[tileSource]![tile] == nil {
@@ -288,6 +291,7 @@ public class MapView: MapScrollView {
 	}
 	
 	private func updateLayers() {
+		CATransaction.begin()
 		CATransaction.setDisableActions(true)
 		
 		addRequiredTileLayers()
@@ -301,7 +305,7 @@ public class MapView: MapScrollView {
 		}
 		positionDrawingLayers()
 		
-		CATransaction.setDisableActions(false)
+		CATransaction.commit()
 	}
 	
 	

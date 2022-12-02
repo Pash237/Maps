@@ -39,13 +39,13 @@ public struct TileSource: Equatable, Hashable {
 			.replacingOccurrences(of: "{y}", with: "\(tile.y)")
 			.replacingOccurrences(of: "{z}", with: "\(tile.zoom)")
 			.replacingOccurrences(of: "{ratio}", with: UIScreen.main.scale > 1 ? "@2x" : "")
-			.replacingOccurrences(of: "{server}", with: ["a", "b", "c"][(tile.x + tile.y + tile.zoom) % 3])
-			.replacingOccurrences(of: "{abc}", with: ["a", "b", "c"][(tile.x + tile.y + tile.zoom) % 3])
-			.replacingOccurrences(of: "{abcd}", with: ["a", "b", "c", "d"][(tile.x + tile.y + tile.zoom) % 4])
-			.replacingOccurrences(of: "{012}", with: ["0", "1", "2"][(tile.x + tile.y + tile.zoom) % 3])
-			.replacingOccurrences(of: "{0123}", with: ["0", "1", "2", "3"][(tile.x + tile.y + tile.zoom) % 4])
-			.replacingOccurrences(of: "{123}", with: ["1", "2", "3"][(tile.x + tile.y + tile.zoom) % 3])
-			.replacingOccurrences(of: "{1234}", with: ["1", "2", "3", "4"][(tile.x + tile.y + tile.zoom) % 4])
+			.replacingOccurrences(of: "{server}", with: ["a", "b", "c"][abs(tile.x + tile.y + tile.zoom) % 3])
+			.replacingOccurrences(of: "{abc}", with: ["a", "b", "c"][abs(tile.x + tile.y + tile.zoom) % 3])
+			.replacingOccurrences(of: "{abcd}", with: ["a", "b", "c", "d"][abs(tile.x + tile.y + tile.zoom) % 4])
+			.replacingOccurrences(of: "{012}", with: ["0", "1", "2"][abs(tile.x + tile.y + tile.zoom) % 3])
+			.replacingOccurrences(of: "{0123}", with: ["0", "1", "2", "3"][abs(tile.x + tile.y + tile.zoom) % 4])
+			.replacingOccurrences(of: "{123}", with: ["1", "2", "3"][abs(tile.x + tile.y + tile.zoom) % 3])
+			.replacingOccurrences(of: "{1234}", with: ["1", "2", "3", "4"][abs(tile.x + tile.y + tile.zoom) % 4])
 		)!
 	}
 
