@@ -167,7 +167,7 @@ public class MapView: MapScrollView {
 				if tileLayer.tile.zoom != bestZoom {
 					// we're zooming out and can throw away unused smaller tiles
 					let loadedLargerTiles = tileLayers.filter {
-						$0 !== tileLayer && $0.isLoaded && $0.tile.zoom < tileLayer.tile.zoom
+						$0 !== tileLayer && $0.loadState == .loaded && $0.tile.zoom < tileLayer.tile.zoom
 						&& abs($0.tile.zoom - bestZoom) < abs(tileLayer.tile.zoom - bestZoom)
 					}
 					if loadedLargerTiles.contains(where: {$0.frame.contains(tileLayer.frame.insetBy(dx: 1, dy: 1))}) {
@@ -183,7 +183,7 @@ public class MapView: MapScrollView {
 		for tileSource in tileSources {
 			let tileLayers = layers(in: tileSource, sorted: true)
 			for tileLayer in tileLayers {
-				if tileLayer.tile.zoom != bestZoom && !tileLayer.isLoaded && !tileLayer.isAlmostLoaded && !tileSource.hasCachedImage(for: tileLayer.tile) {
+				if tileLayer.tile.zoom != bestZoom && tileLayer.loadState != .loaded && !tileLayer.isAlmostLoaded && !tileSource.hasCachedImage(for: tileLayer.tile) {
 					// remove layer if its zoom doesn't match and it's not loaded
 					print("Removing \(tileLayer.tile) — not loaded and zoom doesn't match")
 					remove(layer: tileLayer, in: tileSource)
@@ -208,7 +208,8 @@ public class MapView: MapScrollView {
 
 					// we're zooming in — delete larger tile when the area is fully covered with loaded smaller tiles
 					let loadedSmallerTiles = tileLayers.filter {
-						$0 !== tileLayer && $0.isLoaded && $0.tile.zoom > tileLayer.tile.zoom
+						//TODO: we can't treat failed tiles as loaded because we must show larger tiles when zoom level is unavailable
+						$0 !== tileLayer && ($0.loadState == .loaded/* || $0.loadState == .failed*/) && $0.tile.zoom > tileLayer.tile.zoom
 					}
 
 					// take some points in the visible area — if they are covered with something, suppose that entire region
@@ -318,6 +319,7 @@ public class MapView: MapScrollView {
 		}
 
 		if oldBounds != .zero && bounds != oldBounds {
+			// keep map center in the center when bounds changes
 			let cameraAtOldCenter = Camera(center: coordinates(at: oldBounds.center), zoom: zoom)
 			setCamera(cameraAtOldCenter, animated: false)
 		}
@@ -353,12 +355,12 @@ public class MapView: MapScrollView {
 		for tileSource in tileSources {
 			let tileLayers = layers(in: tileSource)
 			for layer in tileLayers {
-				if !layer.isLoaded && !layer.isLoading && !layer.isScheduledForLoading {
+				if layer.loadState == .idle || layer.loadState == .failedNeedsRetry {
 					if tileSource.hasCachedImage(for: layer.tile) {
 						// load right now if it's cached
 						layer.loadImage()
 					} else {
-						layer.isScheduledForLoading = true
+						layer.markScheduled()
 						DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {[weak self, weak layer] in
 							if let self = self, let layer = layer {
 								layer.loadImage(priority: self.priority(for: layer))
