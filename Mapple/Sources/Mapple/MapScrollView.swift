@@ -38,13 +38,17 @@ public class MapScrollView: UIView {
 	
 	private var animation = SpringAnimation<Camera>(response: 0.4, dampingRatio: 1.0)
 	
-	let projection = SphericalMercator()
+	public var projection = SphericalMercator()
 	
 	public var camera: Camera {
 		get {
 			return Camera(center: coordinates(at: bounds.center), zoom: zoom)
 		}
 		set {
+			guard !newValue.zoom.isNearlyEqual(to: zoom) || !newValue.center.isNearlyEqual(to: coordinates(at: bounds.center)) else {
+				// nothing's changed — don't animate
+				return
+			}
 			var value = newValue
 			if newValue.zoom == zoom && animation.toValue.zoom != 0 {
 				// if we doesn't seem to change zoom, use target zoom value

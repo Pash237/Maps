@@ -17,6 +17,14 @@ public func -(lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> CLLoc
 	CLLocationCoordinate2D(latitude: lhs.latitude - rhs.latitude, longitude: lhs.longitude - rhs.longitude)
 }
 
+public func +=(lhs: inout CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) {
+	lhs = lhs + rhs
+}
+
+public func -=(lhs: inout CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) {
+	lhs = lhs - rhs
+}
+
 extension Coordinates: Hashable {
 	public init(_ latitude: CLLocationDegrees, _ longitude: CLLocationDegrees) {
 		self.init(latitude: latitude, longitude: longitude)
@@ -30,6 +38,12 @@ extension Coordinates: Hashable {
 	public func hash(into hasher: inout Hasher) {
 		hasher.combine(latitude)
 		hasher.combine(longitude)
+	}
+	
+	func isNearlyEqual(to coordinates: Self, precision: CLLocationDegrees = 0.0000001) -> Bool {
+		latitude.isNearlyEqual(to: coordinates.latitude, precision: precision)
+		&&
+		longitude.isNearlyEqual(to: coordinates.longitude, precision: precision)
 	}
 }
 
@@ -115,5 +129,12 @@ public extension Array where Element == Coordinates {
 			(map {$0.latitude}.reduce(0, +))/Double(count),
 			(map {$0.longitude}.reduce(0, +))/Double(count)
 		)
+	}
+}
+
+
+extension FloatingPoint {
+	func isNearlyEqual(to value: Self, precision: Self = .ulpOfOne) -> Bool {
+		abs(self - value) <= precision
 	}
 }
