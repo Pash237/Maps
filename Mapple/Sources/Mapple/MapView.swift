@@ -28,8 +28,8 @@ public class MapView: MapScrollView {
 		}
 	}
 	
-	private var drawingLayersConfigs: [((CALayer?) -> (CALayer))] = []
-	private var drawingLayers: [CALayer] = []
+	private var drawingLayersConfigs: Dictionary<AnyHashable, ((CALayer?) -> (CALayer))> = [:]
+	private var drawingLayers: Dictionary<AnyHashable, CALayer> = [:]
 	private var drawnLayerOffset: CGPoint = .zero
 	private var drawnLayerZoom: Double = 11
 	
@@ -286,7 +286,7 @@ public class MapView: MapScrollView {
 	}
 	
 	private func positionDrawingLayers() {
-		for layer in drawingLayers {
+		for layer in drawingLayers.values {
 			layer.position = projection.convert(point: drawnLayerOffset, from: Double(drawnLayerZoom), to: zoom) - offset
 			let scale = pow(2.0, zoom - Double(drawnLayerZoom))
 			layer.transform = CATransform3DMakeScale(scale, scale, 1)
@@ -304,7 +304,7 @@ public class MapView: MapScrollView {
 	override func didScroll() {
 		animation.stop()
 		updateLayers()
-		onScroll?(.drag)
+		onScroll.send(.drag)
 	}
 	
 	private func updateLayers() {
@@ -349,19 +349,41 @@ public class MapView: MapScrollView {
 	}
 	
 	@discardableResult
-	public func addMapLayer(_ configureLayer: @escaping ((CALayer?) -> (CALayer))) -> CALayer {
+	public func addMapLayer(id: AnyHashable = UUID(), _ configureLayer: @escaping ((CALayer?) -> (CALayer))) -> CALayer {
 		let drawingLayer = configureLayer(nil)
-		drawingLayersConfigs.append(configureLayer)
-		drawingLayers.append(drawingLayer)
+		drawingLayersConfigs[id] = configureLayer
+		drawingLayers[id] = drawingLayer
 		layer.addSublayer(drawingLayer)
 		redrawLayers()
 		positionDrawingLayers()
 		return drawingLayer
 	}
 	
+	public func removeMapLayer(_ layer: CALayer) {
+		for (key, existent) in drawingLayers {
+			if layer === existent {
+				drawingLayersConfigs[key] = nil
+				drawingLayers[key] = nil
+				break
+			}
+		}
+		
+		layer.removeFromSuperlayer()
+	}
+	
+	public func removeMapLayer(_ id: AnyHashable) {
+		if let layer = drawingLayers[id] {
+			removeMapLayer(layer)
+		}
+	}
+	
+	public func mapLayer(with id: AnyHashable) -> CALayer? {
+		drawingLayers[id]
+	}
+	
 	public func redrawLayers() {
-		for (i, layer) in drawingLayers.enumerated() {
-			let _ = drawingLayersConfigs[i](layer)
+		for (key, layer) in drawingLayers {
+			let _ = drawingLayersConfigs[key]?(layer)
 		}
 		
 		drawnLayerZoom = zoom
