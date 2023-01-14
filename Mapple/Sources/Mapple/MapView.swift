@@ -35,7 +35,9 @@ public class MapView: MapScrollView {
 	
 	private var bag = Set<AnyCancellable>()
 	
-	public var onScroll: ((ScrollReason) -> ())? = nil
+	public var onScroll = PassthroughSubject<ScrollReason, Never>()
+	public var onTap = PassthroughSubject<Coordinates, Never>()
+	public var onLongPress = PassthroughSubject<Coordinates, Never>()
 	
 	public init(frame: CGRect, tileSources: [TileSource], camera: Camera) {
 		self.tileSources = tileSources
@@ -48,6 +50,20 @@ public class MapView: MapScrollView {
 				self?.removeUnusedTileLayers()
 			}
 			.store(in: &bag)
+		
+		addGestureRecognizer(TapGestureRecognizer() {[weak self] recognizer in
+			guard let self = self else { return }
+			let point = recognizer.location(in: self)
+			let coordinates = self.coordinates(at: point)
+			self.onTap.send(coordinates)
+		})
+		
+		addGestureRecognizer(LongPressGestureRecognizer() {[weak self] recognizer in
+			guard let self = self else { return }
+			let point = recognizer.location(in: self)
+			let coordinates = self.coordinates(at: point)
+			self.onLongPress.send(coordinates)
+		})
 	}
 
 	public convenience init(frame: CGRect, tileSource: TileSource, camera: Camera) {
@@ -282,7 +298,7 @@ public class MapView: MapScrollView {
 		super.updateOffset(to: camera)
 		
 		updateLayers()
-		onScroll?(.cameraUpdate)
+		onScroll.send(.cameraUpdate)
 	}
 	
 	override func didScroll() {
@@ -327,7 +343,7 @@ public class MapView: MapScrollView {
 		//TODO: called twice at init
 		
 		updateLayers()
-		onScroll?(.layoutChange)
+		onScroll.send(.layoutChange)
 		
 		oldBounds = bounds
 	}
