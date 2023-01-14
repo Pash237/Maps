@@ -49,7 +49,7 @@ public struct SphericalMercator: Projection {
 }
 
 extension Projection {
-	func convert(point: PointOffset, from fromZoom: Double, to toZoom: Double) -> PointOffset {
+	public func convert(point: PointOffset, from fromZoom: Double, to toZoom: Double) -> PointOffset {
 		let scale = pow(2.0, toZoom - fromZoom)
 		return PointOffset(
 			x: point.x * scale,

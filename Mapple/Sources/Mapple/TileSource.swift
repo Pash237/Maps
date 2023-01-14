@@ -40,6 +40,7 @@ public struct TileSource: Equatable, Hashable {
 			.replacingOccurrences(of: "{x}", with: "\(tile.x)")
 			.replacingOccurrences(of: "{y}", with: "\(tile.y)")
 			.replacingOccurrences(of: "{z}", with: "\(tile.zoom)")
+			.replacingOccurrences(of: "{zoom}", with: "\(tile.zoom)")
 			.replacingOccurrences(of: "{ratio}", with: UIScreen.main.scale > 1 ? "@2x" : "")
 			.replacingOccurrences(of: "{server}", with: ["a", "b", "c"][abs(tile.x + tile.y + tile.zoom) % 3])
 			.replacingOccurrences(of: "{abc}", with: ["a", "b", "c"][abs(tile.x + tile.y + tile.zoom) % 3])
@@ -48,6 +49,7 @@ public struct TileSource: Equatable, Hashable {
 			.replacingOccurrences(of: "{0123}", with: ["0", "1", "2", "3"][abs(tile.x + tile.y + tile.zoom) % 4])
 			.replacingOccurrences(of: "{123}", with: ["1", "2", "3"][abs(tile.x + tile.y + tile.zoom) % 3])
 			.replacingOccurrences(of: "{1234}", with: ["1", "2", "3", "4"][abs(tile.x + tile.y + tile.zoom) % 4])
+			//TODO: support {switch:a,b,c} and [abc]
 		)!
 	}
 
@@ -55,7 +57,7 @@ public struct TileSource: Equatable, Hashable {
 		hasher.combine(hash)
 	}
 	
-	func loadImage(for tile: MapTile, completion: @escaping ((_ result: Result<ImageResponse, ImagePipeline.Error>) -> Void)) -> ImageTask {
+	public func loadImage(for tile: MapTile, completion: @escaping ((_ result: Result<ImageResponse, ImagePipeline.Error>) -> Void)) -> ImageTask {
 		let url = url(for: tile)
 		return imagePipeline.loadImage(with: url, completion: {result in
 			if case .success = result {
@@ -65,7 +67,7 @@ public struct TileSource: Equatable, Hashable {
 		})
 	}
 	
-	func hasCachedImage(for tile: MapTile) -> Bool {
+	public func hasCachedImage(for tile: MapTile) -> Bool {
 		if let cached = Self.cachedImageLookup[self]?[tile] {
 			return cached
 		}
@@ -76,7 +78,7 @@ public struct TileSource: Equatable, Hashable {
 		return contains
 	}
 	
-	func cachedImage(for tile: MapTile) -> CGImage? {
+	public func cachedImage(for tile: MapTile) -> CGImage? {
 		let url = url(for: tile)
 		return imagePipeline.cache.cachedImage(for: ImageRequest(url: url))?.image.cgImage
 	}
