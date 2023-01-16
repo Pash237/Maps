@@ -290,7 +290,6 @@ public class MapView: MapScrollView {
 			layer.position = projection.convert(point: drawnLayerOffset, from: Double(drawnLayerZoom), to: zoom) - offset
 			let scale = pow(2.0, zoom - Double(drawnLayerZoom))
 			layer.transform = CATransform3DMakeScale(scale, scale, 1)
-			layer.zPosition = 1
 		}
 	}
 	
