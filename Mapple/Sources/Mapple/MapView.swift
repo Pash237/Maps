@@ -37,6 +37,7 @@ public class MapView: MapScrollView {
 	
 	public var onScroll = PassthroughSubject<ScrollReason, Never>()
 	public var onTap = PassthroughSubject<Coordinates, Never>()
+	public var onTapOnLayer = PassthroughSubject<AnyHashable, Never>()
 	public var onLongPress = PassthroughSubject<Coordinates, Never>()
 	
 	public init(frame: CGRect, tileSources: [TileSource], camera: Camera) {
@@ -56,6 +57,10 @@ public class MapView: MapScrollView {
 			let point = recognizer.location(in: self)
 			let coordinates = self.coordinates(at: point)
 			self.onTap.send(coordinates)
+			
+			if let id = self.layerId(at: coordinates) {
+				self.onTapOnLayer.send(id)
+			}
 		})
 		
 		addGestureRecognizer(LongPressGestureRecognizer() {[weak self] recognizer in
@@ -349,6 +354,9 @@ public class MapView: MapScrollView {
 	
 	@discardableResult
 	public func addMapLayer(id: AnyHashable = UUID(), _ configureLayer: @escaping ((CALayer?) -> (CALayer))) -> CALayer {
+		//remove existent layer if it's present
+		drawingLayers[id]?.removeFromSuperlayer()
+		
 		let drawingLayer = configureLayer(nil)
 		drawingLayersConfigs[id] = configureLayer
 		drawingLayers[id] = drawingLayer
@@ -380,12 +388,26 @@ public class MapView: MapScrollView {
 		drawingLayers[id]
 	}
 	
+	public func allLayerIds() -> [AnyHashable] {
+		Array(drawingLayers.keys)
+	}
+	
 	public func redrawLayers() {
 		for (key, layer) in drawingLayers {
 			let _ = drawingLayersConfigs[key]?(layer)
 		}
 		
 		drawnLayerZoom = zoom
+	}
+	
+	public func layerId(at coordinates: Coordinates) -> AnyHashable? {
+		for (key, layer) in drawingLayers {
+			let point = projection.point(at: zoom, from: coordinates)
+			if layer.shapeContains(point) {
+				return key
+			}
+		}
+		return nil
 	}
 	
 	private func startLoadingRequiredTiles() {
