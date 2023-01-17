@@ -280,7 +280,7 @@ public class MapView: MapScrollView {
 					origin: projection.convert(point: layer.tile.offset, from: Double(layer.tile.zoom), to: zoom) - offset,
 					size: CGSize(width: size, height: size))
 				
-				layer.zPosition = -abs(zoom.rounded() - Double(layer.tile.zoom)) - 25.0 * Double(indexAcrossMapSources)
+				layer.zPosition = -abs(zoom.rounded() - Double(layer.tile.zoom)) - 25.0 * Double(indexAcrossMapSources) - 1
 			}
 		}
 	}
