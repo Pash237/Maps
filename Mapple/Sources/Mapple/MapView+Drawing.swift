@@ -29,7 +29,7 @@ extension MapView {
 			let coordinates = coordinates()
 			
 			var lastPoint: Point = .zero
-			for i in stride(from: 0, to: coordinates.count, by: max(1, 15 - Int(zoom))) {
+			for i in stride(from: 0, to: coordinates.count, by: max(1, 15 - Int(round(zoom)))) {
 				let coordinates = coordinates[i]
 				let point = point(at: coordinates)
 				if i == 0 {
@@ -38,6 +38,13 @@ extension MapView {
 					linePath.addLine(to: point)
 					
 					lastPoint = point
+				}
+			}
+			// always add last point as it may by thrown away by stride
+			if let lastCoordinates = coordinates.last {
+				let endPoint = point(at: lastCoordinates)
+				if (lastPoint - endPoint).maxDimension > 1 {
+					linePath.addLine(to: endPoint)
 				}
 			}
 			
