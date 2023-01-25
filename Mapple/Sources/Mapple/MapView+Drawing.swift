@@ -28,22 +28,28 @@ extension MapView {
 			
 			let coordinates = coordinates()
 			
+			let insetBounds = bounds.insetBy(dx: -bounds.width*1.5, dy: -bounds.height*1.5)
+			
 			var lastPoint: Point = .zero
 			for i in stride(from: 0, to: coordinates.count, by: max(1, 15 - Int(round(zoom)))) {
 				let coordinates = coordinates[i]
 				let point = point(at: coordinates)
-				if i == 0 {
+				guard insetBounds.contains(point-offset) else {
+					lastPoint = .zero
+					continue
+				}
+				if lastPoint == .zero {
 					linePath.move(to: point)
+					lastPoint = point
 				} else if (lastPoint - point).maxDimension > 1 {
 					linePath.addLine(to: point)
-					
 					lastPoint = point
 				}
 			}
 			// always add last point as it may by thrown away by stride
 			if let lastCoordinates = coordinates.last {
 				let endPoint = point(at: lastCoordinates)
-				if (lastPoint - endPoint).maxDimension > 1 {
+				if (lastPoint - endPoint).maxDimension > 1 && insetBounds.contains(endPoint-offset) {
 					linePath.addLine(to: endPoint)
 				}
 			}
