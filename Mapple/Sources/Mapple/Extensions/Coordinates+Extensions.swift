@@ -109,6 +109,13 @@ public struct CoordinateBounds: Codable, Hashable, Equatable, CustomStringConver
 			   &&
 			   longitude > min(northeast.longitude, southwest.longitude) && longitude < max(northeast.longitude, southwest.longitude)
 	}
+	
+	public func intersects(with other: CoordinateBounds) -> Bool {
+		northeast.latitude > other.southwest.latitude
+			&& southwest.latitude < other.northeast.latitude
+		    && northeast.longitude > other.southwest.longitude
+			&& southwest.longitude < other.northeast.longitude
+	}
 		
 	public var description: String {
 		"(\(southwest.latitude), \(southwest.longitude)) — (\(northeast.latitude), \(northeast.longitude))"

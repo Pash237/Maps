@@ -15,8 +15,20 @@ extension MapView {
 	
 	@discardableResult
 	public func addLineLayer(id: AnyHashable = UUID(), _ coordinates: @escaping () -> ([Coordinates]), width: CGFloat = 4, strokeWidth: CGFloat = 1, color: CGColor, strokeColor: CGColor) -> CALayer {
-		addMapLayer(id: id, {[unowned self] layer in
+		
+		let layerCoordinateBounds = CoordinateBounds(coordinates: coordinates())
+		
+		return addMapLayer(id: id, {[unowned self] layer in
 			let layer = layer ?? CALayer()
+			
+			let insetBounds = bounds.insetBy(dx: -bounds.width*1.5, dy: -bounds.height*1.5)
+			let visibleCoordinateBounds = CoordinateBounds(northeast: self.coordinates(at: CGPoint(insetBounds.width, 0)),
+														   southwest: self.coordinates(at: CGPoint(0, insetBounds.height)))
+			
+			guard visibleCoordinateBounds.intersects(with: layerCoordinateBounds) else {
+				return layer
+			}
+			
 			if layer.sublayers?.count ?? 0 < 2 {
 				layer.addSublayer(CAShapeLayer())
 				layer.addSublayer(CAShapeLayer())
@@ -27,8 +39,6 @@ extension MapView {
 			let linePath = UIBezierPath()
 			
 			let coordinates = coordinates()
-			
-			let insetBounds = bounds.insetBy(dx: -bounds.width*1.5, dy: -bounds.height*1.5)
 			
 			var lastPoint: Point = .zero
 			for i in stride(from: 0, to: coordinates.count, by: max(1, 15 - Int(round(zoom)))) {
