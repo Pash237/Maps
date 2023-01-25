@@ -56,6 +56,11 @@ public struct CoordinateBounds: Codable, Hashable, Equatable, CustomStringConver
 		self.southwest = southwest
 	}
 	
+	public init(northwest: Coordinates, southeast: Coordinates) {
+		self.northeast = Coordinates(max(northwest.latitude, southeast.latitude), max(northwest.longitude, southeast.longitude))
+		self.southwest = Coordinates(min(northwest.latitude, southeast.latitude), min(northwest.longitude, southeast.longitude))
+	}
+	
 	public init(coordinates: [Coordinates]) {
 		//TODO: Chukotka will have troubles if points contains both -179 and 179 degrees
 		

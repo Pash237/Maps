@@ -111,8 +111,8 @@ public class MapScrollView: UIView {
 	}
 	
 	public var coordinateBounds: CoordinateBounds {
-		CoordinateBounds(northeast: coordinates(at: .zero),
-						 southwest: coordinates(at: CGPoint(bounds.width, bounds.height)))
+		CoordinateBounds(northeast: coordinates(at: CGPoint(bounds.width, 0)),
+						 southwest: coordinates(at: CGPoint(0, bounds.height)))
 	}
 	
 	required init?(coder: NSCoder) {

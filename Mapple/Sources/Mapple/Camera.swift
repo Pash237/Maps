@@ -43,8 +43,8 @@ public struct Camera: Codable {
 		let bottomRight = offset + bounds.size/2
 		
 		return CoordinateBounds(
-			northeast: projection.coordinates(from: topLeft, at: zoom),
-			southwest: projection.coordinates(from: bottomRight, at: zoom)
+			northwest: projection.coordinates(from: topLeft, at: zoom),
+			southeast: projection.coordinates(from: bottomRight, at: zoom)
 		)
 	}
 }
