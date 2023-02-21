@@ -52,6 +52,13 @@ public class MapView: MapScrollView {
 			}
 			.store(in: &bag)
 		
+		onScroll
+			.throttle(for: 0.1, scheduler: DispatchQueue.main, latest: true)
+			.sink() {[weak self] _ in
+				self?.redrawLayers()
+			}
+			.store(in: &bag)
+		
 		addGestureRecognizer(TapGestureRecognizer() {[weak self] recognizer in
 			guard let self = self else { return }
 			let point = recognizer.location(in: self)

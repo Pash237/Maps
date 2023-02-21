@@ -95,6 +95,37 @@ extension MapView {
 	}
 }
 
+extension MapView {
+	private static let screenScale = UIScreen.main.scale
+	
+	@discardableResult
+	public func addImageLayer(id: AnyHashable = UUID(), _ coordinates: @escaping () -> (Coordinates), image: CGImage) -> CALayer {
+
+		return addMapLayer(id: id, {[unowned self] layer in
+			let layer = layer ?? CALayer()
+			if layer.sublayers == nil {
+				layer.addSublayer(CALayer())
+			}
+			let imageLayer = layer.sublayers!.first!
+			
+			let insetBounds = bounds.insetBy(dx: -bounds.width*1.5, dy: -bounds.height*1.5)
+			let visibleCoordinateBounds = CoordinateBounds(northeast: self.coordinates(at: CGPoint(insetBounds.width, 0)),
+														   southwest: self.coordinates(at: CGPoint(0, insetBounds.height)))
+			let coordinates = coordinates()
+			
+			guard visibleCoordinateBounds.contains(coordinates) else {
+				return layer
+			}
+			
+			imageLayer.bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width)/Self.screenScale, height: CGFloat(image.height)/Self.screenScale)
+			imageLayer.contents = image
+			imageLayer.position = point(at: coordinates)
+			
+			return layer
+		})
+	}
+}
+
 
 extension CALayer {
 	func shapeContains(_ checkPoint: CGPoint, distance: CGFloat = 30) -> Bool {
@@ -107,6 +138,9 @@ extension CALayer {
 					return true
 				}
 			}
+		}
+		if contents != nil {
+			return frame.contains(checkPoint)
 		}
 		for sublayer in sublayers ?? [] {
 			if sublayer.shapeContains(checkPoint, distance: distance) {
