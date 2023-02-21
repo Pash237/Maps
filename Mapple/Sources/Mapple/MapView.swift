@@ -290,6 +290,15 @@ public class MapView: MapScrollView {
 		}
 	}
 	
+	private func positionDrawingLayer(id: AnyHashable) {
+		guard let layer = drawingLayers[id] else {
+			return
+		}
+		layer.position = projection.convert(point: drawnLayerOffset, from: Double(drawnLayerZoom), to: zoom) - offset
+		let scale = pow(2.0, zoom - Double(drawnLayerZoom))
+		layer.transform = CATransform3DMakeScale(scale, scale, 1)
+	}
+	
 	private func positionDrawingLayers() {
 		for layer in drawingLayers.values {
 			layer.position = projection.convert(point: drawnLayerOffset, from: Double(drawnLayerZoom), to: zoom) - offset
@@ -361,8 +370,10 @@ public class MapView: MapScrollView {
 		drawingLayersConfigs[id] = configureLayer
 		drawingLayers[id] = drawingLayer
 		layer.addSublayer(drawingLayer)
-		redrawLayers()
-		positionDrawingLayers()
+		
+		redrawLayer(id: id)
+		positionDrawingLayer(id: id)
+		
 		return drawingLayer
 	}
 	
@@ -392,12 +403,31 @@ public class MapView: MapScrollView {
 		Array(drawingLayers.keys)
 	}
 	
-	public func redrawLayers() {
+	public func redrawLayer(id: AnyHashable) {
+		CATransaction.begin()
+		CATransaction.setDisableActions(true)
+		
+		if let layer = drawingLayers[id] {
+			let _ = drawingLayersConfigs[id]?(layer)
+		}
+		
+		drawnLayerZoom = zoom
+		
+		CATransaction.commit()
+	}
+	
+	public func redrawLayers() {	
+		CATransaction.begin()
+		CATransaction.setDisableActions(true)
+		
 		for (key, layer) in drawingLayers {
 			let _ = drawingLayersConfigs[key]?(layer)
 		}
 		
 		drawnLayerZoom = zoom
+		
+		//TODO: avoid unnecessary transactions
+		CATransaction.commit()
 	}
 	
 	public func layerId(at coordinates: Coordinates) -> AnyHashable? {
