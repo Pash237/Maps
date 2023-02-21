@@ -9,7 +9,7 @@ import Foundation
 import UIKit
 import Nuke
 
-public struct TileSource: Equatable, Hashable {
+public class TileSource: Equatable, Hashable, Codable {
 	public let title: String
 	public let url: String
 	public let tileSize: Int	//size in points on screen
@@ -85,6 +85,34 @@ public struct TileSource: Equatable, Hashable {
 	
 	public static func == (lhs: TileSource, rhs: TileSource) -> Bool {
 		lhs.hash == rhs.hash
+	}
+	
+	enum CodingKeys: CodingKey {
+		case title
+		case url
+		case tileSize
+		case minZoom
+		case maxZoom
+	}
+	
+	public func encode(to encoder: Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(title, forKey: .title)
+		try container.encode(url, forKey: .url)
+		try container.encode(tileSize, forKey: .tileSize)
+		try container.encode(minZoom, forKey: .minZoom)
+		try container.encode(maxZoom, forKey: .maxZoom)
+	}
+	
+	public required convenience init(from decoder: Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		
+		self.init(title: try container.decode(String.self, forKey: .title),
+				  url: try container.decode(String.self, forKey: .url),
+				  tileSize: try container.decode(Int.self, forKey: .tileSize),
+				  minZoom: try container.decode(Int.self, forKey: .minZoom),
+				  maxZoom: try container.decode(Int.self, forKey: .maxZoom)
+		)
 	}
 }
 
