@@ -58,13 +58,6 @@ public class MapView: MapScrollView {
 				self?.redrawLayers()
 			}
 			.store(in: &bag)
-		
-		addGestureRecognizer(LongPressGestureRecognizer() {[weak self] recognizer in
-			guard let self = self else { return }
-			let point = recognizer.location(in: self)
-			let coordinates = self.coordinates(at: point)
-			self.onLongPress.send(coordinates)
-		})
 	}
 
 	public convenience init(frame: CGRect, tileSource: TileSource, camera: Camera) {
@@ -102,6 +95,10 @@ public class MapView: MapScrollView {
 					let tile = MapTile(x: x, y: y, zoom: requiredZoom, size: tileSize)
 					
 					if tileLayersCache[tileSource]![tile] == nil {
+//						let frame = CGRect(
+//							origin: projection.convert(point: tile.offset, from: Double(tile.zoom), to: zoom) - offset,
+//							size: CGSize(width: size, height: size))
+//						print("adding tile \(tile) for \(tileSource.title), cached: \(tileSource.hasCachedImage(for: tile)), frame: \(frame.pretty)")
 						let layer = MapTileLayer(tile: tile, tileSource: tileSource)
 						self.layer.addSublayer(layer)
 						tileLayersCache[tileSource]![tile] = layer
@@ -123,6 +120,8 @@ public class MapView: MapScrollView {
 								let layer = MapTileLayer(tile: largerTile, tileSource: tileSource)
 								self.layer.addSublayer(layer)
 								tileLayersCache[tileSource]![largerTile] = layer
+								
+//								print("      adding larger tile \(largerTile) while tile \(tile) is not loaded")
 								break
 							}
 						}
@@ -167,11 +166,24 @@ public class MapView: MapScrollView {
 	private func removeUnusedTileLayers() {
 		let margin = CGPoint(x: 220, y: 220)
 		
+//		if tileLayersCache[tileSources[0]]!.values.contains(where: {$0.tile.zoom != bestZoom}) {
+//			for tileSource in tileSources {
+//				let tileLayers = layers(in: tileSource)
+//				print("\(tileLayers.count) layers in \(tileSource.title):")
+//				for layer in tileLayers {
+//					print("    \(layer.tile) \(layer.isLoaded ? "✓" : "✕") \(tileSource.hasCachedImage(for: layer.tile) ? "✓" : "✕"), frame: \(layer.frame.pretty)")
+//				}
+//			}
+//		}
+//
+//		print("Removing unused tiles, best zoom: \(bestZoom)...")
+		
 		for tileSource in tileSources {
 			let tileLayers = layers(in: tileSource)
 			for tileLayer in tileLayers {
 				// if tile is out of screen (with some margin), remove it
 				if !bounds.insetBy(dx: -margin.x, dy: -margin.y).intersects(tileLayer.frame) {
+//					print("Removing \(tileLayer.tile) — out of screen: \(tileLayer.frame.pretty)")
 					remove(layer: tileLayer, in: tileSource)
 					continue
 				}
@@ -189,6 +201,7 @@ public class MapView: MapScrollView {
 					}
 					if loadedLargerTiles.contains(where: {$0.frame.contains(tileLayer.frame.insetBy(dx: 1, dy: 1))}) {
 						// some existing larger and more appropriate tile overlaps this tile — remove it
+//						print("Removing \(tileLayer.tile) — some existing larger tile overlaps this tile")
 						remove(layer: tileLayer, in: tileSource)
 						continue
 					}
@@ -196,6 +209,36 @@ public class MapView: MapScrollView {
 			}
 		}
 
+//		for tileSource in tileSources {
+//			let tileLayers = layers(in: tileSource, sorted: true)
+//			for tileLayer in tileLayers {
+//				if tileLayer.isLoaded && tileLayer.tile.zoom < bestZoom {
+//
+//					let smallerNotLoadedTiles = layers(in: tileSource, sorted: true).filter {!$0.isLoaded && $0.tile.zoom > tileLayer.tile.zoom}
+//
+//					let maskPath = CGMutablePath()
+//					for smallerTile in smallerNotLoadedTiles {
+//	//					let rectInLargerTile = tileLayer.convert(smallerTile.frame, to: tileLayer)
+//	//					print("rectInLargerTile = \(rectInLargerTile)")
+//						let rectInLargerTile = CGRect(origin: smallerTile.frame.origin - tileLayer.frame.origin, size: smallerTile.frame.size)
+//						maskPath.addRect(rectInLargerTile)
+//
+////						print("rectInLargerTile = \(rectInLargerTile)")
+//					}
+//					let maskLayer = (tileLayer.mask as? CAShapeLayer) ?? CAShapeLayer()
+//					maskLayer.frame = tileLayer.bounds
+//					maskLayer.path = maskPath
+//					tileLayer.mask = maskLayer
+//					tileLayer.removeAllAnimations()
+//					if maskLayer.superlayer != tileLayer {
+//						tileLayer.addSublayer(maskLayer)
+//					}
+//				} else {
+//					tileLayer.mask?.removeFromSuperlayer()
+//					tileLayer.mask = nil
+//				}
+//			}
+//		}
 		
 		for tileSource in tileSources {
 			let tileLayers = layers(in: tileSource, sorted: true)
@@ -217,6 +260,7 @@ public class MapView: MapScrollView {
 					
 					// don't bother with tiles that are out of screen
 					if tileVisiblePart.width < 1 || tileVisiblePart.height < 1 {
+//						print("Removing \(tileLayer.tile) — out of screen, frame: \(tileLayer.frame.pretty), visible part: \(tileVisiblePart.pretty)")
 						remove(layer: tileLayer, in: tileSource)
 						continue
 					}
@@ -259,6 +303,10 @@ public class MapView: MapScrollView {
 
 					if isSafeToRemove {
 						// smaller more appropriate tiles are fully covering this area
+//						print("Removing \(tileLayer.tile) — smaller more appropriate tiles are covering this area")
+//						print("    tileLayer.frame: \(tileLayer.frame.pretty)")
+//						print("    visible part: \(tileVisiblePart.pretty)")
+//						print("    check points: \(checkPoints)")
 						remove(layer: tileLayer, in: tileSource)
 						continue
 					}
@@ -311,9 +359,29 @@ public class MapView: MapScrollView {
 	}
 	
 	override func didScroll() {
-		animation.stop()
+//		print("did scroll, zoom: \(zoom), offset: \(offset.pretty)")
+		
+		let minZoom = UIScreen.main.bounds.height/2 / Double(tileSize)
+		if zoom < minZoom {
+			zoom = minZoom
+			stopDecelerating()
+		}
+
+		if offset.y < 0 {
+			offset.y = 0
+			stopDecelerating()
+		}
+		if offset.y > mapWidth - bounds.height {
+			offset.y = mapWidth - bounds.height
+			stopDecelerating()
+		}
+		
 		updateLayers()
 		onScroll.send(.drag)
+	}
+	
+	private var mapWidth: Double {
+		Double(tileSize) * pow(2, zoom)
 	}
 	
 	private func updateLayers() {
@@ -484,12 +552,16 @@ public class MapView: MapScrollView {
 	}
 	
 	override func onSingleTap(point: CGPoint) {
-		let coordinates = self.coordinates(at: point)
-		self.onTap.send(coordinates)
-		
-		if let id = self.layerId(at: coordinates) {
-			self.onTapOnLayer.send(id)
+		let coordinates = coordinates(at: point)
+		onTap.send(coordinates)
+		if let id = layerId(at: coordinates) {
+			onTapOnLayer.send(id)
 		}
+	}
+	
+	override func onSingleLongPress(point: CGPoint) {
+		let coordinates = coordinates(at: point)
+		onLongPress.send(coordinates)
 	}
 }
 

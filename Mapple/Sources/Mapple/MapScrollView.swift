@@ -31,11 +31,13 @@ public class MapScrollView: UIView {
 	private var doubleTapDragZoomCenter: CGPoint = .zero
 	private let doubleTapDragZoomDelay: TimeInterval = 0.3
 	private let doubleTapDragZoomSpeed = 0.015
+	private let tapHoldDuration = 0.29
 	private var twoFingerTapTimestamp: TimeInterval?
 	private var twoFingerTravelDistance: CGFloat = 0
 	private var doubleTapZoomTimestamp: TimeInterval?
 	
 	private var singleTapPossible: Bool = false
+	private var singleLongPressPossible: Bool = false
 	
 	private var touchesBeganTimestamps: [Int: TimeInterval] = [:]
 	
@@ -149,6 +151,15 @@ public class MapScrollView: UIView {
 			doubleTapDragZoomCenter = centroid
 		} else {
 			doubleTapDragZooming = false
+			
+			singleLongPressPossible = true
+			DispatchQueue.main.asyncAfter(deadline: .now() + doubleTapDragZoomDelay + 0.01) {[weak self] in
+				guard let self else { return }
+				if self.singleLongPressPossible {
+					self.onSingleLongPress(point: self.lastTouchLocation)
+					self.singleLongPressPossible = false
+				}
+			}
 		}
 		
 		if event.activeTouches.count == 2 && (lastTouchTravelDistance < 30 || touches.count == 2) {
@@ -256,6 +267,7 @@ public class MapScrollView: UIView {
 		centroidToCalculateVelocity = centroid
 		timestampToCalculateVelocity = event.timestamp
 		singleTapPossible = false
+		singleLongPressPossible = false
 	}
 	
 	public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -278,7 +290,10 @@ public class MapScrollView: UIView {
 			previousDistance = nil
 		}
 		
+		singleLongPressPossible = false
+		
 		if activeTouches.isEmpty && touches.count == 1 {
+			let timeSinceTouchBegan = event.timestamp - (touchesBeganTimestamps[touches.first!.hash] ?? 0)
 			// zoom in animated with double-tap gesture
 			let timeSincePreviousTap = event.timestamp - lastTouchTimestamp
 			let distanceBetweenLastTwoTouches = (previousTouchEndCentroid ?? .zero).distance(to: previousCentroid ?? .zero)
@@ -291,7 +306,7 @@ public class MapScrollView: UIView {
 				doubleTapZoomTimestamp = nil
 			}
 			
-			if lastTouchTravelDistance == 0 && (timeSincePreviousTap > doubleTapDragZoomDelay || distanceBetweenLastTwoTouches > 30) {
+			if lastTouchTravelDistance == 0 && timeSinceTouchBegan < tapHoldDuration && (timeSincePreviousTap > doubleTapDragZoomDelay || distanceBetweenLastTwoTouches > 30) {
 				singleTapPossible = true
 				DispatchQueue.main.asyncAfter(deadline: .now() + doubleTapDragZoomDelay + 0.01) {[weak self] in
 					guard let self else { return }
@@ -337,6 +352,9 @@ public class MapScrollView: UIView {
 		if allTouches.isEmpty {
 			previousCentroid = nil
 		}
+		
+		singleLongPressPossible = false
+		singleTapPossible = false
 	}
 	
 	private func startDecelerating() {
@@ -364,6 +382,10 @@ public class MapScrollView: UIView {
 	}
 	
 	func onSingleTap(point: CGPoint) {
+		// override if necessary
+	}
+	
+	func onSingleLongPress(point: CGPoint) {
 		// override if necessary
 	}
 }
