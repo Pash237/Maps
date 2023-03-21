@@ -35,6 +35,8 @@ public class MapScrollView: UIView {
 	private var twoFingerTravelDistance: CGFloat = 0
 	private var doubleTapZoomTimestamp: TimeInterval?
 	
+	private var singleTapPossible: Bool = false
+	
 	private var touchesBeganTimestamps: [Int: TimeInterval] = [:]
 	
 	private var animation = SpringAnimation<Camera>(response: 0.4, dampingRatio: 1.0)
@@ -162,6 +164,7 @@ public class MapScrollView: UIView {
 		timestampToCalculateVelocity = event.timestamp
 		previousTouchTravelDistance = lastTouchTravelDistance
 		lastTouchTravelDistance = 0
+		singleTapPossible = false
 		
 		// stop any animation immediately when tapping on the map
 		let distanceBetweenLastTwoTouches = (previousTouchEndCentroid ?? .zero).distance(to: previousCentroid ?? .zero)
@@ -252,6 +255,7 @@ public class MapScrollView: UIView {
 		previousTouchesCount = allTouches.count
 		centroidToCalculateVelocity = centroid
 		timestampToCalculateVelocity = event.timestamp
+		singleTapPossible = false
 	}
 	
 	public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -274,7 +278,7 @@ public class MapScrollView: UIView {
 			previousDistance = nil
 		}
 		
-		if activeTouches.isEmpty {
+		if activeTouches.isEmpty && touches.count == 1 {
 			// zoom in animated with double-tap gesture
 			let timeSincePreviousTap = event.timestamp - lastTouchTimestamp
 			let distanceBetweenLastTwoTouches = (previousTouchEndCentroid ?? .zero).distance(to: previousCentroid ?? .zero)
@@ -285,6 +289,17 @@ public class MapScrollView: UIView {
 				setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom + 1))
 			} else {
 				doubleTapZoomTimestamp = nil
+			}
+			
+			if lastTouchTravelDistance == 0 && (timeSincePreviousTap > doubleTapDragZoomDelay || distanceBetweenLastTwoTouches > 30) {
+				singleTapPossible = true
+				DispatchQueue.main.asyncAfter(deadline: .now() + doubleTapDragZoomDelay + 0.01) {[weak self] in
+					guard let self else { return }
+					if self.singleTapPossible {
+						self.onSingleTap(point: self.lastTouchLocation)
+						self.singleTapPossible = false
+					}
+				}
 			}
 			
 			if velocity.length < 400 {
@@ -346,6 +361,10 @@ public class MapScrollView: UIView {
 		if (offset - targetOffset).length < 5 {
 			stopDecelerating()
 		}
+	}
+	
+	func onSingleTap(point: CGPoint) {
+		// override if necessary
 	}
 }
 

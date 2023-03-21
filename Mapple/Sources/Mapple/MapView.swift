@@ -59,17 +59,6 @@ public class MapView: MapScrollView {
 			}
 			.store(in: &bag)
 		
-		addGestureRecognizer(TapGestureRecognizer() {[weak self] recognizer in
-			guard let self = self else { return }
-			let point = recognizer.location(in: self)
-			let coordinates = self.coordinates(at: point)
-			self.onTap.send(coordinates)
-			
-			if let id = self.layerId(at: coordinates) {
-				self.onTapOnLayer.send(id)
-			}
-		})
-		
 		addGestureRecognizer(LongPressGestureRecognizer() {[weak self] recognizer in
 			guard let self = self else { return }
 			let point = recognizer.location(in: self)
@@ -493,9 +482,43 @@ public class MapView: MapScrollView {
 			}
 		}
 	}
+	
+	override func onSingleTap(point: CGPoint) {
+		let coordinates = self.coordinates(at: point)
+		self.onTap.send(coordinates)
+		
+		if let id = self.layerId(at: coordinates) {
+			self.onTapOnLayer.send(id)
+		}
+	}
 }
 
 
+//-------------------
 
+
+class Logger {
+	static let shared = Logger()
+	
+	private lazy var shortFormatter: DateFormatter = {
+		var formatter = DateFormatter()
+		formatter.dateFormat = DateFormatter.dateFormat(fromTemplate: "HH:mm:ss.SSS", options: 0, locale: Locale(identifier: "en_US"))
+		return formatter
+	}()
+	
+	func log(_ string: String) {
+		let delimeter = Thread.isMainThread ? "|" : "¦"
+		let stringWithDate = "\(shortFormatter.string(from: Date())) \(delimeter) \(string)"
+		Swift.print(stringWithDate)
+	}
 }
+
+func print(_ items: Any..., separator: String = " ", terminator: String = "\n") {
+	if _isDebugAssertConfiguration() {
+		if let firstItem = items.first {
+			Logger.shared.log(firstItem as? String ?? "\(firstItem)")
+		} else {
+			Logger.shared.log("")
+		}
+	}
 }
