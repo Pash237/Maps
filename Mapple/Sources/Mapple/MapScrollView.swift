@@ -146,7 +146,7 @@ public class MapScrollView: UIView {
 		}
 		
 		// detect double tap
-		if event.activeTouches.count == 1 && lastTouchTravelDistance < 50 && timeSincePreviousTap < doubleTapDragZoomDelay && (centroid - lastTouchLocation).length < 50 && twoFingerTapTimestamp == nil && doubleTapZoomTimestamp == nil {
+		if event.activeTouches.count == 1 && lastTouchTravelDistance < 10 && timeSincePreviousTap < doubleTapDragZoomDelay && (centroid - lastTouchLocation).length < 30 && twoFingerTapTimestamp == nil && doubleTapZoomTimestamp == nil {
 			doubleTapDragZooming = true
 			doubleTapDragZoomCenter = centroid
 		} else {
@@ -162,7 +162,7 @@ public class MapScrollView: UIView {
 			}
 		}
 		
-		if event.activeTouches.count == 2 && (lastTouchTravelDistance < 30 || touches.count == 2) {
+		if event.activeTouches.count == 2 && (lastTouchTravelDistance < 20 || touches.count == 2) {
 			// detect possible two-finger tap
 			twoFingerTapTimestamp = event.timestamp
 		} else {
