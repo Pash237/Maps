@@ -559,7 +559,7 @@ public class MapView: MapScrollView {
 		}
 	}
 	
-	override func onSingleLongPress(point: CGPoint) {
+	override func onLongPress(point: CGPoint) {
 		let coordinates = coordinates(at: point)
 		onLongPress.send(coordinates)
 	}
