@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  Camera+Motion.swift
 //  
 //
 //  Created by Pavel Alexeev on 21.07.2022.
