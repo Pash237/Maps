@@ -6,15 +6,16 @@
 //
 
 import UIKit
+import CoreLocation
 
 extension MapView {
 	@discardableResult
-	public func addLineLayer(id: AnyHashable = UUID(), _ coordinates: [Coordinates], width: CGFloat = 4, strokeWidth: CGFloat = 1, color: CGColor, strokeColor: CGColor) -> CALayer {
+	public func addLineLayer(id: AnyHashable = UUID(), _ coordinates: [Coordinates], width: CGFloat = 4, strokeWidth: CGFloat = 1, color: CGColor, strokeColor: CGColor = CGColor(gray: 1, alpha: 1)) -> CALayer {
 		addLineLayer(id: id, {coordinates}, width: width, strokeWidth: strokeWidth, color: color, strokeColor: strokeColor)
 	}
 	
 	@discardableResult
-	public func addLineLayer(id: AnyHashable = UUID(), _ coordinates: @escaping () -> ([Coordinates]), width: CGFloat = 4, strokeWidth: CGFloat = 1, color: CGColor, strokeColor: CGColor) -> CALayer {
+	public func addLineLayer(id: AnyHashable = UUID(), _ coordinates: @escaping () -> ([Coordinates]), width: CGFloat = 4, strokeWidth: CGFloat = 1, color: CGColor, strokeColor: CGColor = CGColor(gray: 1, alpha: 1)) -> CALayer {
 		
 		let layerCoordinateBounds = CoordinateBounds(coordinates: coordinates())
 		
@@ -92,6 +93,28 @@ extension MapView {
 	@discardableResult
 	public func updateLineLayer(id: AnyHashable = UUID(), _ coordinates: [Coordinates], width: CGFloat = 4, strokeWidth: CGFloat = 1, color: CGColor, strokeColor: CGColor) -> CALayer {
 		addLineLayer(id: id, {coordinates}, width: width, strokeWidth: strokeWidth, color: color, strokeColor: strokeColor)
+	}
+	
+	public func updateLineLayer(id: AnyHashable = UUID(), width: CGFloat = 4, strokeWidth: CGFloat = 1, color: CGColor, strokeColor: CGColor) {
+		guard let layer = mapLayer(with: id),
+			  layer.sublayers?.count ?? 0 >= 2 else {
+			return
+		}
+		let main = layer.sublayers![1] as! CAShapeLayer
+		let outline = layer.sublayers![0] as! CAShapeLayer
+		
+		main.lineWidth = width
+		main.strokeColor = color
+		
+		if strokeWidth > 0 {
+			outline.lineWidth = width + strokeWidth*2
+			outline.strokeColor = strokeColor
+			if outline.isHidden != false {
+				outline.isHidden = false
+			}
+		} else if outline.isHidden != true {
+			outline.isHidden = true
+		}
 	}
 }
 
