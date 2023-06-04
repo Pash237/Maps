@@ -151,26 +151,38 @@ extension MapView {
 
 
 extension CALayer {
-	func shapeContains(_ checkPoint: CGPoint, distance: CGFloat = 30) -> Bool {
+	func distance(to checkPoint: CGPoint, threshold: CGFloat = 30, lowThreshold: CGFloat = 10) -> CGFloat? {
 		if let path = (self as? CAShapeLayer)?.path {
 			
 			//TODO: linear-interpolate line, becase it might have points which are far from each other
 			
+			var minDistance: CGFloat?
+			var threshold = threshold
 			for point in path.getPoints() {
-				if point.distance(to: checkPoint) < distance {
-					return true
+				let distance = point.distance(to: checkPoint)
+				if distance < threshold {
+					minDistance = distance
+					threshold = distance
+					if distance < lowThreshold {
+						break
+					}
 				}
 			}
+			return minDistance
 		}
 		if contents != nil {
-			return frame.contains(checkPoint)
+			if frame.contains(checkPoint) {
+				return frame.center.distance(to: checkPoint)
+			} else {
+				return nil
+			}
 		}
 		for sublayer in sublayers ?? [] {
-			if sublayer.shapeContains(checkPoint, distance: distance) {
-				return true
+			if let distance = sublayer.distance(to: checkPoint, threshold: threshold) {
+				return distance
 			}
 		}
 		
-		return false
+		return nil
 	}
 }

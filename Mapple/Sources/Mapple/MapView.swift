@@ -494,14 +494,24 @@ public class MapView: MapScrollView {
 		CATransaction.commit()
 	}
 	
-	public func layerId(at coordinates: Coordinates) -> AnyHashable? {
-		for (key, layer) in drawingLayers {
+	private func layerIds(at coordinates: Coordinates, threshold: CGFloat = 30.0) -> [(key: AnyHashable, distance: CGFloat)] {
+		drawingLayers.compactMap { key, layer in
 			let point = projection.point(at: zoom, from: coordinates)
-			if layer.shapeContains(point) {
-				return key
+			if let distance = layer.distance(to: point), distance < threshold {
+				return (key, distance)
+			} else {
+				return nil
 			}
 		}
-		return nil
+	}
+	
+	public func layerId(at coordinates: Coordinates) -> AnyHashable? {
+		let touchedLayerIds = layerIds(at: coordinates)
+		let closest = touchedLayerIds.min(by: {
+			$0.distance < $1.distance
+		})
+		
+		return closest?.key
 	}
 	
 	private func startLoadingRequiredTiles() {
