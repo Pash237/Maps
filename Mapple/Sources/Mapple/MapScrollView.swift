@@ -152,7 +152,7 @@ public class MapScrollView: UIView {
 		} else {
 			doubleTapDragZooming = false
 			
-			longPressPossible = true
+			longPressPossible = (event.activeTouches.count == 1)
 			DispatchQueue.main.asyncAfter(deadline: .now() + doubleTapDragZoomDelay + 0.01) {[weak self] in
 				guard let self else { return }
 				if self.longPressPossible {
