@@ -10,8 +10,8 @@ import CoreLocation
 
 extension MapView {
 	@discardableResult
-	public func addLineLayer(id: AnyHashable = UUID(), _ coordinates: [Coordinates], width: CGFloat = 4, strokeWidth: CGFloat = 1, color: CGColor, strokeColor: CGColor = CGColor(gray: 1, alpha: 1)) -> CALayer {
-		addLineLayer(id: id, {coordinates}, width: width, strokeWidth: strokeWidth, color: color, strokeColor: strokeColor)
+	public func addLineLayer(id: AnyHashable = UUID(), _ coordinates: @autoclosure @escaping () -> ([Coordinates]), width: CGFloat = 4, strokeWidth: CGFloat = 1, color: CGColor, strokeColor: CGColor = CGColor(gray: 1, alpha: 1)) -> CALayer {
+		addLineLayer(id: id, coordinates, width: width, strokeWidth: strokeWidth, color: color, strokeColor: strokeColor)
 	}
 	
 	@discardableResult
