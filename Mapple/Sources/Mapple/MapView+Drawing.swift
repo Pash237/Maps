@@ -18,6 +18,7 @@ extension MapView {
 	public func addLineLayer(id: AnyHashable = UUID(), _ coordinates: @escaping () -> ([Coordinates]), width: CGFloat = 4, strokeWidth: CGFloat = 1, color: CGColor, strokeColor: CGColor = CGColor(gray: 1, alpha: 1)) -> CALayer {
 		
 		let layerCoordinateBounds = CoordinateBounds(coordinates: coordinates())
+		var forceSetupLayers = true
 		
 		return addMapLayer(id: id, {[unowned self] layer in
 			let layer = layer ?? CALayer()
@@ -30,9 +31,12 @@ extension MapView {
 				return layer
 			}
 			
+			var needToSetUpLayers = forceSetupLayers
 			if layer.sublayers?.count ?? 0 < 2 {
 				layer.addSublayer(CAShapeLayer())
 				layer.addSublayer(CAShapeLayer())
+				needToSetUpLayers = true
+				forceSetupLayers = false
 			}
 			let main = layer.sublayers![1] as! CAShapeLayer
 			let outline = layer.sublayers![0] as! CAShapeLayer
@@ -66,21 +70,25 @@ extension MapView {
 			}
 			
 			main.path = linePath.cgPath
-			main.opacity = 1
-			main.lineWidth = width
-			main.lineCap = .round
-			main.lineJoin = .round
-			main.fillColor = UIColor.clear.cgColor
-			main.strokeColor = color
+			if needToSetUpLayers {
+				main.opacity = 1
+				main.lineWidth = width
+				main.lineCap = .round
+				main.lineJoin = .round
+				main.fillColor = UIColor.clear.cgColor
+				main.strokeColor = color
+			}
 			
 			if strokeWidth > 0 {
 				outline.path = linePath.cgPath
-				outline.opacity = 1
-				outline.lineWidth = width + strokeWidth*2
-				outline.lineCap = .round
-				outline.lineJoin = .round
-				outline.fillColor = UIColor.clear.cgColor
-				outline.strokeColor = strokeColor
+				if needToSetUpLayers {
+					outline.opacity = 1
+					outline.lineWidth = width + strokeWidth*2
+					outline.lineCap = .round
+					outline.lineJoin = .round
+					outline.fillColor = UIColor.clear.cgColor
+					outline.strokeColor = strokeColor
+				}
 				outline.isHidden = false
 			} else {
 				outline.isHidden = true
