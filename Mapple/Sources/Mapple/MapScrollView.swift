@@ -38,6 +38,7 @@ public class MapScrollView: UIView {
 	
 	private var singleTapPossible: Bool = false
 	private var longPressWorkItem: DispatchWorkItem?
+	private var trackingLayer: AnyHashable?
 	
 	private var touchesBeganTimestamps: [Int: TimeInterval] = [:]
 	
@@ -156,6 +157,10 @@ public class MapScrollView: UIView {
 			if event.activeTouches.count == 1 {
 				longPressWorkItem = DispatchWorkItem(block: {[weak self] in
 					guard let self else { return }
+					if let trackingLayer {
+						onEndTracking(trackingLayer)
+						self.trackingLayer = nil
+					}
 					onLongPress(point: previousCentroid ?? centroid)
 				})
 				DispatchQueue.main.asyncAfter(deadline: .now() + doubleTapDragZoomDelay + 0.01, execute: longPressWorkItem!)
@@ -176,6 +181,13 @@ public class MapScrollView: UIView {
 		previousTouchTravelDistance = lastTouchTravelDistance
 		lastTouchTravelDistance = 0
 		singleTapPossible = false
+		
+		endTracking()
+		if event.activeTouches.count == 1,
+		   let layer = trackingLayer(at: centroid) {
+			trackingLayer = layer
+			onBeginTracking(layer)
+		}
 		
 		// stop any animation immediately when tapping on the map
 		let distanceBetweenLastTwoTouches = (previousTouchEndCentroid ?? .zero).distance(to: previousCentroid ?? .zero)
@@ -268,6 +280,7 @@ public class MapScrollView: UIView {
 		timestampToCalculateVelocity = event.timestamp
 		singleTapPossible = false
 		longPressWorkItem?.cancel()
+		endTracking()
 	}
 	
 	public override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -311,8 +324,9 @@ public class MapScrollView: UIView {
 				DispatchQueue.main.asyncAfter(deadline: .now() + doubleTapDragZoomDelay + 0.01) {[weak self] in
 					guard let self else { return }
 					if self.singleTapPossible {
-						self.onSingleTap(point: self.lastTouchLocation)
 						self.singleTapPossible = false
+						endTracking()
+						self.onSingleTap(point: self.lastTouchLocation)
 					}
 				}
 			}
@@ -336,6 +350,8 @@ public class MapScrollView: UIView {
 		} else {
 			previousCentroid = activeTouches.centroid(in: self)
 		}
+		
+		endTracking()
 	}
 	
 	public override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -355,6 +371,7 @@ public class MapScrollView: UIView {
 		
 		longPressWorkItem?.cancel()
 		singleTapPossible = false
+		endTracking()
 	}
 	
 	private func startDecelerating() {
@@ -386,6 +403,25 @@ public class MapScrollView: UIView {
 	}
 	
 	func onLongPress(point: CGPoint) {
+		// override if necessary
+	}
+	
+	func endTracking() {
+		if let trackingLayer, !singleTapPossible {
+			onEndTracking(trackingLayer)
+			self.trackingLayer = nil
+		}
+	}
+	
+	func trackingLayer(at point: CGPoint) -> AnyHashable? {
+		nil
+	}
+	
+	func onBeginTracking(_ trackingLayer: AnyHashable) {
+		// override if necessary
+	}
+	
+	func onEndTracking(_ trackingLayer: AnyHashable) {
 		// override if necessary
 	}
 }

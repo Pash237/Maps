@@ -39,6 +39,9 @@ public class MapView: MapScrollView {
 	public var onTap = PassthroughSubject<Coordinates, Never>()
 	public var onTapOnLayer = PassthroughSubject<AnyHashable, Never>()
 	public var onLongPress = PassthroughSubject<Coordinates, Never>()
+	public var onBeginTracking = PassthroughSubject<AnyHashable, Never>()
+	public var onEndTracking = PassthroughSubject<AnyHashable, Never>()
+	public var trackingLayer: AnyHashable?
 	
 	public init(frame: CGRect, tileSources: [TileSource], camera: Camera) {
 		self.tileSources = tileSources
@@ -572,6 +575,18 @@ public class MapView: MapScrollView {
 	override func onLongPress(point: CGPoint) {
 		let coordinates = coordinates(at: point)
 		onLongPress.send(coordinates)
+	}
+	
+	override func trackingLayer(at point: CGPoint) -> AnyHashable? {
+		layerId(at: coordinates(at: point))
+	}
+	
+	override func onBeginTracking(_ trackingLayer: AnyHashable) {
+		onBeginTracking.send(trackingLayer)
+	}
+	
+	override func onEndTracking(_ trackingLayer: AnyHashable) {
+		onEndTracking.send(trackingLayer)
 	}
 }
 
