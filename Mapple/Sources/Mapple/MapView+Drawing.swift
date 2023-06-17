@@ -45,21 +45,28 @@ extension MapView {
 			
 			let coordinates = coordinates()
 			
+			let pointToSkip = max(0, 17 - Int(round(zoom)))
+			let minimumPointDistance = zoom > 18 ? 1.0 : (zoom > 14 ? 3.0 : 4.0)
+			
 			var lastPoint: Point = .zero
-			for i in stride(from: 0, to: coordinates.count, by: max(1, 15 - Int(round(zoom)))) {
+			var i = 0
+			while i < coordinates.count {
 				let coordinates = coordinates[i]
 				let point = point(at: coordinates)
 				guard insetBounds.contains(point-offset) else {
 					lastPoint = .zero
+					i += 20 + pointToSkip
 					continue
 				}
 				if lastPoint == .zero {
 					linePath.move(to: point)
 					lastPoint = point
-				} else if (lastPoint - point).maxDimension > 1 {
+				} else if (lastPoint - point).maxDimension > minimumPointDistance {
 					linePath.addLine(to: point)
 					lastPoint = point
 				}
+				
+				i += 1 + pointToSkip
 			}
 			// always add last point as it may by thrown away by stride
 			if let lastCoordinates = coordinates.last {
