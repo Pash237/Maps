@@ -335,6 +335,8 @@ public class MapView: MapScrollView {
 				layer.zPosition = -abs(zoom.rounded() - Double(layer.tile.zoom)) - 25.0 * Double(indexAcrossMapSources) - 1
 			}
 		}
+		
+		layer.setAffineTransform(CGAffineTransform(rotationAngle: camera.rotation))
 	}
 	
 	private func positionDrawingLayer(id: AnyHashable) {

@@ -11,8 +11,10 @@ import Motion
 public class MapScrollView: UIView {
 	public var offset: Point = .zero
 	public var zoom: Double = 11
+	public var rotation: Radians = 0.0
 	
 	private var previousTouchesCount = 0
+	private var previousCentroidInWindow: CGPoint?
 	private var previousCentroid: CGPoint?
 	private var previousDistance: CGFloat?
 	
@@ -40,6 +42,8 @@ public class MapScrollView: UIView {
 	private var longPressWorkItem: DispatchWorkItem?
 	private var trackingLayer: AnyHashable?
 	
+	private var previousAngle: Radians?
+	
 	private var touchesBeganTimestamps: [Int: TimeInterval] = [:]
 	
 	private var animation = SpringAnimation<Camera>(response: 0.4, dampingRatio: 1.0)
@@ -48,7 +52,7 @@ public class MapScrollView: UIView {
 	
 	public var camera: Camera {
 		get {
-			return Camera(center: coordinates(at: bounds.center), zoom: zoom)
+			return Camera(center: coordinates(at: bounds.center), zoom: zoom, rotation: rotation)
 		}
 		set {
 			guard !newValue.zoom.isNearlyEqual(to: zoom) || !newValue.center.isNearlyEqual(to: coordinates(at: bounds.center)) else {
@@ -134,10 +138,12 @@ public class MapScrollView: UIView {
 		guard let event = event else {
 			return
 		}
+		let centroidInWindow = event.centroid()
 		let centroid = event.centroid(in: self)
 		let timeSincePreviousTap = event.timestamp - lastTouchTimestamp
 		
 		previousCentroid = centroid
+		previousCentroidInWindow = centroidInWindow
 		if event.activeTouches.count == 1 {
 			previousTouchesCount = event.activeTouches.count
 		}
@@ -170,6 +176,8 @@ public class MapScrollView: UIView {
 		if event.activeTouches.count == 2 && (lastTouchTravelDistance < 20 || touches.count == 2) {
 			// detect possible two-finger tap
 			twoFingerTapTimestamp = event.timestamp
+			
+			previousAngle = event.angle()
 		} else {
 			twoFingerTapTimestamp = nil
 		}
@@ -203,13 +211,15 @@ public class MapScrollView: UIView {
 		super.touchesMoved(touches, with: event)
 		
 		guard let event = event,
-			  let previousCentroid = previousCentroid else {
+			  let previousCentroid = previousCentroid,
+			  let previousCentroidInWindow = previousCentroidInWindow else {
 			return
 		}
 		
 		var allTouches = event.activeTouches
 		
 		let centroid = event.centroid(in: self)
+		let centroidInWindow = event.centroid()
 		
 		if previousTouchesCount != allTouches.count {
 			offset += centroid - previousCentroid
@@ -245,7 +255,13 @@ public class MapScrollView: UIView {
 				twoFingerTravelDistance += abs(previousDistance - distance)
 			}
 			
+			let angle = event.angle()!
+			if let previousAngle {
+				rotation += (angle - previousAngle)
+			}
+			
 			previousDistance = distance
+			previousAngle = angle
 		}
 		
 		if let timestamp = timestampToCalculateVelocity, let centroidToCalculateVelocity = centroidToCalculateVelocity {
@@ -259,7 +275,7 @@ public class MapScrollView: UIView {
 		if allTouches.count == 1 {
 			if doubleTapDragZooming {
 				let previousZoom = zoom
-				zoom *= 1 + (previousCentroid - centroid).y / zoom * doubleTapDragZoomSpeed
+				zoom *= 1 + (previousCentroidInWindow - centroidInWindow).y / zoom * doubleTapDragZoomSpeed
 				
 				let zoomCenterOnMap = offset + doubleTapDragZoomCenter
 				let zoomChange = 1.0 - pow(2.0, zoom - previousZoom)
@@ -275,6 +291,7 @@ public class MapScrollView: UIView {
 		didScroll()
 		
 		self.previousCentroid = centroid
+		self.previousCentroidInWindow = centroidInWindow
 		previousTouchesCount = allTouches.count
 		centroidToCalculateVelocity = centroid
 		timestampToCalculateVelocity = event.timestamp
@@ -423,44 +440,5 @@ public class MapScrollView: UIView {
 	
 	func onEndTracking(_ trackingLayer: AnyHashable) {
 		// override if necessary
-	}
-}
-
-extension UIEvent {
-	var activeTouches: [UITouch] {
-		(allTouches ?? [])
-			.filter {$0.phase != .ended && $0.phase != .cancelled}
-	}
-	
-	func centroid(in view: UIView? = nil, phases: Set<UITouch.Phase> = [.began, .moved, .stationary]) -> CGPoint {
-		(allTouches ?? []).centroid(in: view, phases: phases)
-	}
-}
-
-extension Collection where Element == UITouch {
-	func centroid(in view: UIView? = nil, phases: Set<UITouch.Phase> = [.began, .moved, .stationary]) -> CGPoint {
-		var centroid = CGPoint.zero
-		var touchesCount = 0
-		for touch in self {
-			if !phases.contains(touch.phase) {
-				continue
-			}
-
-			let point = touch.location(in: view)
-			centroid.x += point.x
-			centroid.y += point.y
-			touchesCount += 1
-		}
-		if touchesCount == 0 {
-			if !phases.contains(.ended) {
-				return self.centroid(in: view, phases: [.began, .moved, .stationary, .ended, .cancelled])
-			} else {
-				return CGPoint.zero
-				
-			}
-		}
-		centroid.x /= CGFloat(touchesCount)
-		centroid.y /= CGFloat(touchesCount)
-		return centroid
 	}
 }

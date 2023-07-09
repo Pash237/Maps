@@ -8,13 +8,17 @@
 import Foundation
 import CoreGraphics
 
+public typealias Radians = Double
+
 public struct Camera: Codable {
 	public var center: Coordinates
 	public var zoom: Double
+	public var rotation: Radians
 	
-	public init(center: Coordinates, zoom: Double) {
+	public init(center: Coordinates, zoom: Double, rotation: Radians = 0.0) {
 		self.center = center
 		self.zoom = zoom
+		self.rotation = rotation
 	}
 	
 	public static func fitting(_ coordinateBounds: CoordinateBounds, with bounds: CGRect, padding: Double = 0, projection: Projection = SphericalMercator()) -> Camera {
