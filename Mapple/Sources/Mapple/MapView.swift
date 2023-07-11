@@ -9,7 +9,6 @@ import UIKit
 import Combine
 import CoreLocation
 import Nuke
-import Motion
 
 public enum ScrollReason {
 	case drag
@@ -28,11 +27,6 @@ public class MapView: MapScrollView {
 		}
 	}
 	
-	private var drawingLayersConfigs: Dictionary<AnyHashable, ((CALayer?) -> (CALayer))> = [:]
-	private var drawingLayers: Dictionary<AnyHashable, CALayer> = [:]
-	private var drawnLayerOffset: CGPoint = .zero
-	private var drawnLayerZoom: Double = 11
-	
 	private var bag = Set<AnyCancellable>()
 	
 	public var onScroll = PassthroughSubject<ScrollReason, Never>()
@@ -42,6 +36,9 @@ public class MapView: MapScrollView {
 	public var onBeginTracking = PassthroughSubject<AnyHashable, Never>()
 	public var onEndTracking = PassthroughSubject<AnyHashable, Never>()
 	public var trackingLayer: AnyHashable?
+	
+	public let pointLayers = PointMapLayers()
+	public let spatialLayers = SpatialMapLayers()
 	
 	public init(frame: CGRect, tileSources: [TileSource], camera: Camera) {
 		self.tileSources = tileSources
@@ -55,12 +52,10 @@ public class MapView: MapScrollView {
 			}
 			.store(in: &bag)
 		
-		onScroll
-			.throttle(for: 0.1, scheduler: DispatchQueue.main, latest: true)
-			.sink() {[weak self] _ in
-				self?.redrawLayers()
-			}
-			.store(in: &bag)
+		spatialLayers.frame = bounds
+		layer.addSublayer(spatialLayers)
+		pointLayers.frame = bounds
+		layer.addSublayer(pointLayers)
 	}
 
 	public convenience init(frame: CGRect, tileSource: TileSource, camera: Camera) {
@@ -339,23 +334,6 @@ public class MapView: MapScrollView {
 		layer.setAffineTransform(CGAffineTransform(rotationAngle: camera.rotation))
 	}
 	
-	private func positionDrawingLayer(id: AnyHashable) {
-		guard let layer = drawingLayers[id] else {
-			return
-		}
-		layer.position = projection.convert(point: drawnLayerOffset, from: Double(drawnLayerZoom), to: zoom) - offset
-		let scale = pow(2.0, zoom - Double(drawnLayerZoom))
-		layer.transform = CATransform3DMakeScale(scale, scale, 1)
-	}
-	
-	private func positionDrawingLayers() {
-		for layer in drawingLayers.values {
-			layer.position = projection.convert(point: drawnLayerOffset, from: Double(drawnLayerZoom), to: zoom) - offset
-			let scale = pow(2.0, zoom - Double(drawnLayerZoom))
-			layer.transform = CATransform3DMakeScale(scale, scale, 1)
-		}
-	}
-	
 	override func updateOffset(to camera: Camera) {
 		super.updateOffset(to: camera)
 		
@@ -399,10 +377,8 @@ public class MapView: MapScrollView {
 		startLoadingRequiredTiles()
 		prioritizeLoading()
 		
-		if drawnLayerZoom != zoom {
-			redrawLayers()
-		}
-		positionDrawingLayers()
+		spatialLayers.update(offset: offset, zoom: zoom, rotation: rotation)
+		pointLayers.update(offset: offset, zoom: zoom, rotation: rotation)
 		
 		CATransaction.commit()
 	}
@@ -430,88 +406,15 @@ public class MapView: MapScrollView {
 		oldBounds = bounds
 	}
 	
-	@discardableResult
-	public func addMapLayer(id: AnyHashable = UUID(), _ configureLayer: @escaping ((CALayer?) -> (CALayer))) -> CALayer {
-		//remove existent layer if it's present
-		drawingLayers[id]?.removeFromSuperlayer()
-		
-		let drawingLayer = configureLayer(nil)
-		drawingLayersConfigs[id] = configureLayer
-		drawingLayers[id] = drawingLayer
-		layer.addSublayer(drawingLayer)
-		
-		redrawLayer(id: id)
-		positionDrawingLayer(id: id)
-		
-		return drawingLayer
-	}
-	
-	public func removeMapLayer(_ layer: CALayer) {
-		for (key, existent) in drawingLayers {
-			if layer === existent {
-				drawingLayersConfigs[key] = nil
-				drawingLayers[key] = nil
-				break
-			}
-		}
-		
-		layer.removeFromSuperlayer()
-	}
-	
-	public func removeMapLayer(_ id: AnyHashable) {
-		if let layer = drawingLayers[id] {
-			removeMapLayer(layer)
-		}
-	}
-	
-	public func mapLayer(with id: AnyHashable) -> CALayer? {
-		drawingLayers[id]
-	}
-	
-	public func allLayerIds() -> [AnyHashable] {
-		Array(drawingLayers.keys)
-	}
-	
-	public func redrawLayer(id: AnyHashable) {
-		CATransaction.begin()
-		CATransaction.setDisableActions(true)
-		
-		if let layer = drawingLayers[id] {
-			let _ = drawingLayersConfigs[id]?(layer)
-		}
-		
-		drawnLayerZoom = zoom
-		
-		CATransaction.commit()
-	}
-	
-	public func redrawLayers() {	
-		CATransaction.begin()
-		CATransaction.setDisableActions(true)
-		
-		for (key, layer) in drawingLayers {
-			let _ = drawingLayersConfigs[key]?(layer)
-		}
-		
-		drawnLayerZoom = zoom
-		
-		//TODO: avoid unnecessary transactions
-		CATransaction.commit()
-	}
-	
-	private func layerIds(at coordinates: Coordinates, threshold: CGFloat = 30.0) -> [(key: AnyHashable, distance: CGFloat)] {
-		drawingLayers.compactMap { key, layer in
-			let point = projection.point(at: zoom, from: coordinates)
-			if let distance = layer.distance(to: point), distance < threshold {
-				return (key, distance)
-			} else {
-				return nil
-			}
-		}
-	}
-	
 	public func layerId(at coordinates: Coordinates) -> AnyHashable? {
-		let touchedLayerIds = layerIds(at: coordinates)
+		let touchedLayerIds = spatialLayers.layerIds(at: coordinates).map {
+			(key: $0.key, distance: $0.distance)
+		}
+		+
+		pointLayers.layerIds(at: coordinates).map {
+			(key: $0.key, distance: $0.distance - 6.0)	// higher priority for POIs
+		}
+		
 		let closest = touchedLayerIds.min(by: {
 			$0.distance < $1.distance
 		})

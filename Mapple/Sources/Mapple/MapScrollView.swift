@@ -38,10 +38,13 @@ public class MapScrollView: UIView {
 	private var twoFingerTravelDistance: CGFloat = 0
 	private var doubleTapZoomTimestamp: TimeInterval?
 	
-	private var singleTapPossible: Bool = false
+	private var singleTapPossible = false
 	private var longPressWorkItem: DispatchWorkItem?
 	private var trackingLayer: AnyHashable?
 	
+	private var rotationGestureThreshold = 0.25
+	private var rotationGestureDetected = false
+	private var touchesBeganAngle: Radians?
 	private var previousAngle: Radians?
 	
 	private var touchesBeganTimestamps: [Int: TimeInterval] = [:]
@@ -55,7 +58,7 @@ public class MapScrollView: UIView {
 			return Camera(center: coordinates(at: bounds.center), zoom: zoom, rotation: rotation)
 		}
 		set {
-			guard !newValue.zoom.isNearlyEqual(to: zoom) || !newValue.center.isNearlyEqual(to: coordinates(at: bounds.center)) else {
+			guard !newValue.zoom.isNearlyEqual(to: zoom) || !newValue.center.isNearlyEqual(to: coordinates(at: bounds.center)) || !newValue.rotation.isNearlyEqual(to: rotation) else {
 				// nothing's changed — don't animate
 				return
 			}
@@ -94,6 +97,7 @@ public class MapScrollView: UIView {
 		stopDecelerating()
 		zoom = camera.zoom
 		offset = point(at: camera.center) - bounds.center
+		rotation = camera.rotation
 	}
 	
 	public func setCamera(_ newCamera: Camera, animated: Bool = true) {
@@ -177,7 +181,8 @@ public class MapScrollView: UIView {
 			// detect possible two-finger tap
 			twoFingerTapTimestamp = event.timestamp
 			
-			previousAngle = event.angle()
+			touchesBeganAngle = event.angle()
+			previousAngle = touchesBeganAngle
 		} else {
 			twoFingerTapTimestamp = nil
 		}
@@ -256,8 +261,13 @@ public class MapScrollView: UIView {
 			}
 			
 			let angle = event.angle()!
-			if let previousAngle {
-				rotation += (angle - previousAngle)
+			if let previousAngle, let touchesBeganAngle {
+				if fabs(touchesBeganAngle - angle) > rotationGestureThreshold {
+					rotationGestureDetected = true
+				}
+				if rotationGestureDetected {
+					rotation += (angle - previousAngle)
+				}
 			}
 			
 			previousDistance = distance
@@ -318,6 +328,7 @@ public class MapScrollView: UIView {
 		
 		if activeTouches.count < 2 {
 			previousDistance = nil
+			rotationGestureDetected = false
 		}
 		
 		longPressWorkItem?.cancel()
