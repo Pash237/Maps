@@ -10,7 +10,8 @@ import UIKit
 extension UIEvent {
 	var activeTouches: [UITouch] {
 		(allTouches ?? [])
-			.filter {$0.phase != .ended && $0.phase != .cancelled}
+			.sorted { $0.hashValue > $1.hashValue }
+			.filter { $0.phase != .ended && $0.phase != .cancelled }
 	}
 	
 	func centroid(in view: UIView? = nil, phases: Set<UITouch.Phase> = [.began, .moved, .stationary]) -> CGPoint {
@@ -18,7 +19,9 @@ extension UIEvent {
 	}
 	
 	func angle(in view: UIView? = nil, phases: Set<UITouch.Phase> = [.began, .moved, .stationary]) -> Radians? {
-		(allTouches ?? []).angle(in: view, phases: phases)
+		(allTouches ?? [])
+			.sorted { $0.hashValue > $1.hashValue }
+			.angle(in: view, phases: phases)
 	}
 }
 

@@ -97,7 +97,7 @@ public class MapScrollView: UIView {
 		stopDecelerating()
 		zoom = camera.zoom
 		offset = point(at: camera.center) - bounds.center
-		rotation = camera.rotation
+		rotation = camera.rotation.inRange
 	}
 	
 	public func setCamera(_ newCamera: Camera, animated: Bool = true) {
@@ -180,11 +180,13 @@ public class MapScrollView: UIView {
 		if event.activeTouches.count == 2 && (lastTouchTravelDistance < 20 || touches.count == 2) {
 			// detect possible two-finger tap
 			twoFingerTapTimestamp = event.timestamp
-			
-			touchesBeganAngle = event.angle()
-			previousAngle = touchesBeganAngle
 		} else {
 			twoFingerTapTimestamp = nil
+		}
+		
+		if event.activeTouches.count == 2 {
+			touchesBeganAngle = event.angle()
+			previousAngle = touchesBeganAngle
 		}
 		
 		targetOffset = offset
@@ -265,7 +267,7 @@ public class MapScrollView: UIView {
 					rotationGestureDetected = true
 				}
 				if rotationGestureDetected {
-					rotation += (angle - previousAngle)
+					rotation = (rotation + (angle - previousAngle)).inRange
 				}
 			}
 			
@@ -322,11 +324,13 @@ public class MapScrollView: UIView {
 		if let twoFingerTapTimestamp = twoFingerTapTimestamp, activeTouches.isEmpty, event.timestamp - twoFingerTapTimestamp < 0.3, twoFingerTravelDistance < 4 {
 			let zoomCenterOnMap = offset + bounds.center + ((previousCentroid ?? bounds.center) - bounds.center) * 0.5
 			
-			setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom - 1))
+			setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom - 1, rotation: rotation))
 		}
 		
 		if activeTouches.count < 2 {
 			previousDistance = nil
+			previousAngle = nil
+			touchesBeganAngle = nil
 			rotationGestureDetected = false
 		}
 		
@@ -341,7 +345,7 @@ public class MapScrollView: UIView {
 				let zoomCenterOnMap = offset + bounds.center + ((previousCentroid ?? bounds.center) - bounds.center) * 0.5
 				doubleTapZoomTimestamp = event.timestamp
 				
-				setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom + 1))
+				setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom + 1, rotation: rotation))
 			} else {
 				doubleTapZoomTimestamp = nil
 			}

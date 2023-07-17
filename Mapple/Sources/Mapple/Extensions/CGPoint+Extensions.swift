@@ -80,9 +80,25 @@ extension CGRect {
 }
 
 
-
 public extension CGRect {
 	var center: CGPoint {
 		CGPoint(x: midX, y: midY)
+	}
+	
+	init(left: CGFloat, top: CGFloat, right: CGFloat, bottom: CGFloat) {
+		self.init(x: left, y: top, width: max(0, right - left), height: max(0, bottom - top))
+	}
+}
+
+public extension Radians {
+	var inRange: Radians {
+		var angle = self
+		while angle > .pi {
+			angle -= .pi * 2
+		}
+		while angle <= -.pi {
+			angle += .pi * 2
+		}
+		return angle
 	}
 }
