@@ -143,7 +143,7 @@ public class MapScrollView: UIView {
 			return
 		}
 		let centroidInWindow = event.centroid()
-		let centroid = event.centroid(in: self)
+		let centroid = event.centroid(in: mapContentsView)
 		let timeSincePreviousTap = event.timestamp - lastTouchTimestamp
 		
 		previousCentroid = centroid
@@ -222,8 +222,7 @@ public class MapScrollView: UIView {
 		}
 		
 		var allTouches = event.activeTouches
-		
-		let centroid = event.centroid(in: self)
+		let centroid = event.centroid(in: mapContentsView)
 		let centroidInWindow = event.centroid()
 		
 		if previousTouchesCount != allTouches.count {
@@ -243,7 +242,7 @@ public class MapScrollView: UIView {
 				touchesBeganTimestamps[$0.hash] ?? $0.timestamp > touchesBeganTimestamps[$1.hash] ?? $1.timestamp
 			})
 			
-			let distance = allTouches[0].location(in: self).distance(to: allTouches[1].location(in: self))
+			let distance = allTouches[0].location(in: mapContentsView).distance(to: allTouches[1].location(in: mapContentsView))
 			
 			if let previousDistance = previousDistance,
 			   previousTouchesCount == allTouches.count,
@@ -374,9 +373,13 @@ public class MapScrollView: UIView {
 			doubleTapDragZooming = false
 			
 			lastTouchTimestamp = event.timestamp
-			lastTouchLocation = touches.first?.location(in: self) ?? .zero
+			lastTouchLocation = touches.first!.location(in: mapContentsView)
 		} else {
-			previousCentroid = activeTouches.centroid(in: self)
+			previousCentroid = activeTouches.centroid(in: mapContentsView)
+		}
+		
+		for touch in touches {
+			touchesBeganTimestamps.removeValue(forKey: touch.hash)
 		}
 		
 		endTracking()
@@ -392,14 +395,20 @@ public class MapScrollView: UIView {
 		if allTouches.count < 2 {
 			previousDistance = nil
 		}
-		
 		if allTouches.isEmpty {
 			previousCentroid = nil
+		}
+		for touch in touches {
+			touchesBeganTimestamps.removeValue(forKey: touch.hash)
 		}
 		
 		longPressWorkItem?.cancel()
 		singleTapPossible = false
 		endTracking()
+	}
+	
+	var mapContentsView: UIView {
+		self
 	}
 	
 	private func startDecelerating() {

@@ -7,7 +7,7 @@
 
 import UIKit
 
-public class SpatialMapLayers: CALayer {
+public class SpatialMapLayersView: UIView {
 	private var offset: Point = .zero
 	private var zoom: Double = 11
 	private var rotation: Radians = 0.0
@@ -18,6 +18,15 @@ public class SpatialMapLayers: CALayer {
 	private var drawnLayerOffset: CGPoint = .zero
 	private var drawnLayerZoom: Double = 11
 	private var drawingViews: Dictionary<AnyHashable, UIView> = [:]
+	
+	override init(frame: CGRect) {
+		super.init(frame: frame)
+		isUserInteractionEnabled = false
+	}
+	
+	required init?(coder: NSCoder) {
+		fatalError("init(coder:) has not been implemented")
+	}
 
 	@discardableResult
 	public func addMapLayer(id: AnyHashable = UUID(), _ configureLayer: @escaping ((CALayer?) -> (CALayer))) -> CALayer {
@@ -27,7 +36,7 @@ public class SpatialMapLayers: CALayer {
 		let drawingLayer = configureLayer(nil)
 		drawingLayersConfigs[id] = configureLayer
 		drawingLayers[id] = drawingLayer
-		addSublayer(drawingLayer)
+		layer.addSublayer(drawingLayer)
 		
 		redrawLayer(id: id)
 		positionDrawingLayer(drawingLayer)
@@ -85,21 +94,13 @@ public class SpatialMapLayers: CALayer {
 		CATransaction.commit()
 	}
 	
-	public func redrawLayers(allowAnimation: Bool = false) {
-		CATransaction.begin()
-		if !allowAnimation {
-			CATransaction.setDisableActions(true)
-		}
-		
+	func redrawLayers(allowAnimation: Bool = false) {
 		for (key, layer) in drawingLayers {
 			let _ = drawingLayersConfigs[key]?(layer)
 		}
 		
 		drawnLayerZoom = zoom
 		drawnLayerOffset = offset
-		
-		//TODO: avoid unnecessary transactions
-		CATransaction.commit()
 	}
 	
 	func layerIds(at coordinates: Coordinates, threshold: CGFloat = 30.0) -> [(key: AnyHashable, distance: CGFloat)] {
@@ -125,7 +126,7 @@ public class SpatialMapLayers: CALayer {
 }
 
 
-extension SpatialMapLayers {
+extension SpatialMapLayersView {
 	@discardableResult
 	public func addLineLayer(id: AnyHashable = UUID(), _ coordinates: @autoclosure @escaping () -> ([Coordinates]), width: CGFloat = 4, strokeWidth: CGFloat = 1, color: CGColor, strokeColor: CGColor = CGColor(gray: 1, alpha: 1)) -> CALayer {
 		addLineLayer(id: id, coordinates, width: width, strokeWidth: strokeWidth, color: color, strokeColor: strokeColor)

@@ -10,7 +10,7 @@ import UIKit
 open class PointMapLayer: CALayer {
 	public var coordinates: Coordinates {
 		didSet {
-			if let parent = superlayer as? PointMapLayers {
+			if let parent = superlayer?.delegate as? PointMapLayersView {
 				let point = parent.projection.point(at: parent.zoom, from: coordinates)
 				position = point - parent.offset
 			}
@@ -36,7 +36,7 @@ open class PointMapLayer: CALayer {
 	}
 }
 
-public class PointMapLayers: CALayer {
+public class PointMapLayersView: UIView {
 	private(set) var offset: Point = .zero
 	private(set) var zoom: Double = 11
 	private(set) var rotation: Radians = 0.0
@@ -47,6 +47,15 @@ public class PointMapLayers: CALayer {
 	private var drawnLayerOffset: CGPoint = .zero
 	private var drawnLayerZoom: Double = 11
 	private var drawingViews: Dictionary<AnyHashable, UIView> = [:]
+	
+	override init(frame: CGRect) {
+		super.init(frame: frame)
+		isUserInteractionEnabled = false
+	}
+	
+	required init?(coder: NSCoder) {
+		fatalError("init(coder:) has not been implemented")
+	}
 
 	@discardableResult
 	public func addMapLayer(id: AnyHashable = UUID(), _ configureLayer: @escaping ((PointMapLayer?) -> (PointMapLayer))) -> PointMapLayer {
@@ -56,7 +65,7 @@ public class PointMapLayers: CALayer {
 		let drawingLayer = configureLayer(nil)
 		drawingLayersConfigs[id] = configureLayer
 		drawingLayers[id] = drawingLayer
-		addSublayer(drawingLayer)
+		layer.addSublayer(drawingLayer)
 		
 		redrawLayer(id: id)
 		positionDrawingLayer(drawingLayer)
@@ -115,20 +124,12 @@ public class PointMapLayers: CALayer {
 	}
 	
 	public func redrawLayers(allowAnimation: Bool = false) {
-		CATransaction.begin()
-		if !allowAnimation {
-			CATransaction.setDisableActions(true)
-		}
-		
 		for (key, layer) in drawingLayers {
 			let _ = drawingLayersConfigs[key]?(layer)
 		}
 		
 		drawnLayerZoom = zoom
 		drawnLayerOffset = offset
-		
-		//TODO: avoid unnecessary transactions
-		CATransaction.commit()
 	}
 	
 	func layerIds(at coordinates: Coordinates, threshold: CGFloat = 30.0) -> [(key: AnyHashable, distance: CGFloat)] {
