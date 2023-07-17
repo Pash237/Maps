@@ -240,11 +240,13 @@ public class MapScrollView: UIView {
 		}
 		
 		if allTouches.count >= 2 {
+			// we might have more that two touches — use first two
 			allTouches.sort(by: {
 				touchesBeganTimestamps[$0.hash] ?? $0.timestamp > touchesBeganTimestamps[$1.hash] ?? $1.timestamp
 			})
 			
-			let distance = allTouches[0].location(in: mapContentsView).distance(to: allTouches[1].location(in: mapContentsView))
+			let distance = allTouches[0].location(in: nil).distance(to: allTouches[1].location(in: nil))
+			let angle = event.angle()!
 			
 			if let previousDistance = previousDistance,
 			   previousTouchesCount == allTouches.count,
@@ -261,9 +263,8 @@ public class MapScrollView: UIView {
 				twoFingerTravelDistance += abs(previousDistance - distance)
 			}
 			
-			let angle = event.angle()!
 			if let previousAngle, let touchesBeganAngle {
-				if fabs(touchesBeganAngle - angle) > rotationGestureThreshold {
+				if fabs(touchesBeganAngle - angle).inRange > rotationGestureThreshold {
 					rotationGestureDetected = true
 				}
 				if rotationGestureDetected {
