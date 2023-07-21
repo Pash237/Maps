@@ -102,12 +102,12 @@ public class MapScrollView: UIView {
 	
 	public func setCamera(_ newCamera: Camera, animated: Bool = true) {
 		guard animated else {
-			camera = newCamera
+			camera = newCamera.withRotationClose(to: camera)
 			return
 		}
 		
 		animation.updateValue(to: camera)
-		animation.toValue = newCamera
+		animation.toValue = newCamera.withRotationClose(to: camera)
 		
 		animation.start()
 	}
@@ -465,5 +465,20 @@ public class MapScrollView: UIView {
 	
 	func onEndTracking(_ trackingLayer: AnyHashable) {
 		// override if necessary
+	}
+}
+
+
+private extension Camera {
+	func withRotationClose(to camera: Camera) -> Camera {
+		var adjusted = self
+
+		while abs(adjusted.rotation - camera.rotation + 2.0 * .pi) < abs(adjusted.rotation - camera.rotation)  {
+			adjusted.rotation += 2.0 * .pi
+		}
+		while abs(adjusted.rotation - camera.rotation - 2.0 * .pi) < abs(adjusted.rotation - camera.rotation)  {
+			adjusted.rotation -= 2.0 * .pi
+		}
+		return adjusted
 	}
 }
