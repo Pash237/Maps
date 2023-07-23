@@ -41,16 +41,14 @@ public class MapView: MapScrollView {
 	public init(frame: CGRect, tileSources: [TileSource], camera: Camera) {
 		self.tileSources = tileSources
 		tileMapView.tileSources = tileSources
+		tileMapView.frame = CGRect(origin: .zero, size: frame.size)
+		spatialLayers.frame = CGRect(origin: .zero, size: frame.size)
+		pointLayers.frame = CGRect(origin: .zero, size: frame.size)
+		
 		super.init(frame: frame, camera: camera)
-				
-		tileMapView.frame = bounds
-		tileMapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+		
 		addSubview(tileMapView)
-		spatialLayers.frame = bounds
-		spatialLayers.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 		addSubview(spatialLayers)
-		pointLayers.frame = bounds
-		pointLayers.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 		addSubview(pointLayers)
 	}
 
@@ -72,7 +70,7 @@ public class MapView: MapScrollView {
 	}
 	
 	override func didScroll() {
-//		print("did scroll, zoom: \(zoom), offset: \(offset.pretty)")
+//		print("did scroll, zoom: \(zoom), offset: \(offset.pretty), angle: \(rotation)°")
 		
 		let minZoom = UIScreen.main.bounds.height/2 / Double(tileSize)
 		if zoom < minZoom {
@@ -98,18 +96,23 @@ public class MapView: MapScrollView {
 	}
 	
 	private func updateLayers() {
+		guard !tileMapView.layer.bounds.isEmpty else {
+			return
+		}
+		
 		CATransaction.begin()
 		CATransaction.setDisableActions(true)
 		
+		//TODO: do not update if nothing's changed!
+		tileMapView.update(offset: offset, zoom: zoom, rotation: rotation)
 		spatialLayers.update(offset: offset, zoom: zoom, rotation: rotation)
 		pointLayers.update(offset: offset, zoom: zoom, rotation: rotation)
 		
+		print("updating layers, bounds = \(bounds), frame = \(frame), rotation = \(rotation.pretty) (\(camera.rotation.pretty)), bounds = \(tileMapView.layer.bounds)")
 		
-		if !tileMapView.layer.bounds.isEmpty {
-			tileMapView.layer.setAffineTransform(CGAffineTransform(rotationAngle: camera.rotation))
-			spatialLayers.layer.setAffineTransform(CGAffineTransform(rotationAngle: camera.rotation))
-			pointLayers.layer.setAffineTransform(CGAffineTransform(rotationAngle: camera.rotation))
-		}
+		tileMapView.transform = CGAffineTransform(rotationAngle: rotation)
+		spatialLayers.transform = CGAffineTransform(rotationAngle: rotation)
+		pointLayers.transform = CGAffineTransform(rotationAngle: rotation)
 		
 		CATransaction.commit()
 	}
@@ -129,12 +132,19 @@ public class MapView: MapScrollView {
 			setCamera(cameraAtOldCenter, animated: false)
 		}
 		
-		//TODO: called twice at init
-		
-		updateLayers()
-		onScroll.send(.layoutChange)
-		
-		oldBounds = bounds
+		if bounds != oldBounds {
+			tileMapView.transform = .identity
+			spatialLayers.transform = .identity
+			pointLayers.transform = .identity
+			tileMapView.frame = bounds
+			spatialLayers.frame = bounds
+			pointLayers.frame = bounds
+			
+			updateLayers()
+			onScroll.send(.layoutChange)
+			
+			oldBounds = bounds
+		}
 	}
 	
 	override var mapContentsView: UIView {

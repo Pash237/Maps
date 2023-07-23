@@ -42,7 +42,7 @@ public class MapScrollView: UIView {
 	private var longPressWorkItem: DispatchWorkItem?
 	private var trackingLayer: AnyHashable?
 	
-	private var rotationGestureThreshold = 0.25
+	private var rotationGestureThreshold: Radians = 0.25
 	private var rotationGestureDetected = false
 	private var touchesBeganAngle: Radians?
 	private var previousAngle: Radians?
@@ -55,7 +55,7 @@ public class MapScrollView: UIView {
 	
 	public var camera: Camera {
 		get {
-			return Camera(center: coordinates(at: bounds.center), zoom: zoom, rotation: rotation)
+			return Camera(center: coordinates(at: bounds.center), zoom: animation.toValue.zoom, rotation: animation.toValue.rotation)
 		}
 		set {
 			guard !newValue.zoom.isNearlyEqual(to: zoom) || !newValue.center.isNearlyEqual(to: coordinates(at: bounds.center)) || !newValue.rotation.isNearlyEqual(to: rotation) else {
@@ -69,12 +69,12 @@ public class MapScrollView: UIView {
 			}
 			
 			if animation.hasResolved() {
-				animation.toValue = value
+				animation.toValue = value.withRotationClose(to: animation.toValue)
 				animation.stop(resolveImmediately: true, postValueChanged: true)
 			} else {
 				// if we have ongoing animation, redirect it to a new location
 				//TODO: this may result in infinite animation if camera updates are more frequent than animation duration
-				animation.toValue = value
+				animation.toValue = value.withRotationClose(to: animation.toValue)
 			}
 		}
 	}
@@ -299,6 +299,8 @@ public class MapScrollView: UIView {
 		}
 		
 		targetOffset = offset
+		animation.toValue.zoom = zoom
+		animation.toValue.rotation = rotation
 		animation.stop()
 		didScroll()
 		
