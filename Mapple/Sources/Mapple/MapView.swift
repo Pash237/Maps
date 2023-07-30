@@ -35,8 +35,9 @@ public class MapView: MapScrollView {
 	public var trackingLayer: AnyHashable?
 	
 	private let tileMapView = TileMapView()
-	public let pointLayers = PointMapLayersView()
 	public let spatialLayers = SpatialMapLayersView()
+	public let pointLayers = PointMapLayersView()
+	public let topSpatialLayers = SpatialMapLayersView()
 	
 	public init(frame: CGRect, tileSources: [TileSource], camera: Camera) {
 		self.tileSources = tileSources
@@ -44,12 +45,14 @@ public class MapView: MapScrollView {
 		tileMapView.frame = CGRect(origin: .zero, size: frame.size)
 		spatialLayers.frame = CGRect(origin: .zero, size: frame.size)
 		pointLayers.frame = CGRect(origin: .zero, size: frame.size)
+		topSpatialLayers.frame = CGRect(origin: .zero, size: frame.size)
 		
 		super.init(frame: frame, camera: camera)
 		
 		addSubview(tileMapView)
 		addSubview(spatialLayers)
 		addSubview(pointLayers)
+		addSubview(topSpatialLayers)
 	}
 
 	public convenience init(frame: CGRect, tileSource: TileSource, camera: Camera) {
@@ -107,12 +110,12 @@ public class MapView: MapScrollView {
 		tileMapView.update(offset: offset, zoom: zoom, rotation: rotation)
 		spatialLayers.update(offset: offset, zoom: zoom, rotation: rotation)
 		pointLayers.update(offset: offset, zoom: zoom, rotation: rotation)
-		
-		print("updating layers, bounds = \(bounds), frame = \(frame), rotation = \(rotation.pretty) (\(camera.rotation.pretty)), bounds = \(tileMapView.layer.bounds)")
-		
+		topSpatialLayers.update(offset: offset, zoom: zoom, rotation: rotation)
+				
 		tileMapView.transform = CGAffineTransform(rotationAngle: rotation)
 		spatialLayers.transform = CGAffineTransform(rotationAngle: rotation)
 		pointLayers.transform = CGAffineTransform(rotationAngle: rotation)
+		topSpatialLayers.transform = CGAffineTransform(rotationAngle: rotation)
 		
 		CATransaction.commit()
 	}
@@ -136,9 +139,11 @@ public class MapView: MapScrollView {
 			tileMapView.transform = .identity
 			spatialLayers.transform = .identity
 			pointLayers.transform = .identity
+			topSpatialLayers.transform = .identity
 			tileMapView.frame = bounds
 			spatialLayers.frame = bounds
 			pointLayers.frame = bounds
+			topSpatialLayers.frame = bounds
 			
 			updateLayers()
 			onScroll.send(.layoutChange)
