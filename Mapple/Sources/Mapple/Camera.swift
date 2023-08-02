@@ -51,4 +51,22 @@ public struct Camera: Codable {
 			southeast: projection.coordinates(from: bottomRight, at: zoom)
 		)
 	}
+	
+	public func with(center: Coordinates) -> Camera {
+		var camera = self
+		camera.center = center
+		return camera
+	}
+	
+	public func with(zoom: Double) -> Camera {
+		var camera = self
+		camera.zoom = zoom
+		return camera
+	}
+	
+	public func with(rotation: Double) -> Camera {
+		var camera = self
+		camera.rotation = rotation
+		return camera
+	}
 }
