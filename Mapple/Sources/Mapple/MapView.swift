@@ -17,6 +17,10 @@ public enum ScrollReason {
 	case layoutChange
 }
 
+public protocol MapViewLayer: UIView {
+	func update(offset: Point, zoom: Double, rotation: Radians)
+}
+
 public class MapView: MapScrollView {
 	private var tileLayersCache: [TileSource: [MapTile: MapTileLayer]] = [:]
 	
@@ -34,6 +38,8 @@ public class MapView: MapScrollView {
 	public var onEndTracking = PassthroughSubject<AnyHashable, Never>()
 	public var trackingLayer: AnyHashable?
 	
+	public var mapLayers: [MapViewLayer]
+	
 	private let tileMapView = TileMapView()
 	public let spatialLayers = SpatialMapLayersView()
 	public let pointLayers = PointMapLayersView()
@@ -42,17 +48,22 @@ public class MapView: MapScrollView {
 	public init(frame: CGRect, tileSources: [TileSource], camera: Camera) {
 		self.tileSources = tileSources
 		tileMapView.tileSources = tileSources
-		tileMapView.frame = CGRect(origin: .zero, size: frame.size)
-		spatialLayers.frame = CGRect(origin: .zero, size: frame.size)
-		pointLayers.frame = CGRect(origin: .zero, size: frame.size)
-		topSpatialLayers.frame = CGRect(origin: .zero, size: frame.size)
+		
+		mapLayers = [
+			tileMapView,
+			spatialLayers,
+			pointLayers,
+			topSpatialLayers
+		]
+		mapLayers.forEach {
+			$0.frame = CGRect(origin: .zero, size: frame.size)
+		}
 		
 		super.init(frame: frame, camera: camera)
 		
-		addSubview(tileMapView)
-		addSubview(spatialLayers)
-		addSubview(pointLayers)
-		addSubview(topSpatialLayers)
+		mapLayers.forEach {
+			addSubview($0)
+		}
 	}
 
 	public convenience init(frame: CGRect, tileSource: TileSource, camera: Camera) {
@@ -107,15 +118,11 @@ public class MapView: MapScrollView {
 		CATransaction.setDisableActions(true)
 		
 		//TODO: do not update if nothing's changed!
-		tileMapView.update(offset: offset, zoom: zoom, rotation: rotation)
-		spatialLayers.update(offset: offset, zoom: zoom, rotation: rotation)
-		pointLayers.update(offset: offset, zoom: zoom, rotation: rotation)
-		topSpatialLayers.update(offset: offset, zoom: zoom, rotation: rotation)
-				
-		tileMapView.transform = CGAffineTransform(rotationAngle: rotation)
-		spatialLayers.transform = CGAffineTransform(rotationAngle: rotation)
-		pointLayers.transform = CGAffineTransform(rotationAngle: rotation)
-		topSpatialLayers.transform = CGAffineTransform(rotationAngle: rotation)
+		
+		mapLayers.forEach {
+			$0.update(offset: offset, zoom: zoom, rotation: rotation)
+			$0.transform = CGAffineTransform(rotationAngle: rotation)
+		}
 		
 		CATransaction.commit()
 	}
@@ -136,14 +143,10 @@ public class MapView: MapScrollView {
 		}
 		
 		if bounds != oldBounds {
-			tileMapView.transform = .identity
-			spatialLayers.transform = .identity
-			pointLayers.transform = .identity
-			topSpatialLayers.transform = .identity
-			tileMapView.frame = bounds
-			spatialLayers.frame = bounds
-			pointLayers.frame = bounds
-			topSpatialLayers.frame = bounds
+			mapLayers.forEach {
+				$0.transform = .identity
+				$0.frame = bounds
+			}
 			
 			updateLayers()
 			onScroll.send(.layoutChange)

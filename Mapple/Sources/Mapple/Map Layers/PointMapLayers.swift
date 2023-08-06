@@ -36,7 +36,7 @@ open class PointMapLayer: CALayer {
 	}
 }
 
-public class PointMapLayersView: UIView {
+public class PointMapLayersView: UIView, MapViewLayer {
 	private(set) var offset: Point = .zero
 	private(set) var zoom: Double = 11
 	private(set) var rotation: Radians = 0.0
@@ -99,7 +99,7 @@ public class PointMapLayersView: UIView {
 		Array(drawingLayers.keys)
 	}
 	
-	func update(offset: Point, zoom: Double, rotation: Radians) {
+	public func update(offset: Point, zoom: Double, rotation: Radians) {
 		self.offset = offset
 		self.zoom = zoom
 		self.rotation = rotation

@@ -7,7 +7,7 @@
 
 import UIKit
 
-public class SpatialMapLayersView: UIView {
+public class SpatialMapLayersView: UIView, MapViewLayer {
 	private var offset: Point = .zero
 	private var zoom: Double = 11
 	private var rotation: Radians = 0.0
@@ -70,7 +70,7 @@ public class SpatialMapLayersView: UIView {
 		Array(drawingLayers.keys)
 	}
 	
-	func update(offset: Point, zoom: Double, rotation: Radians) {
+	public func update(offset: Point, zoom: Double, rotation: Radians) {
 		self.offset = offset
 		self.zoom = zoom
 		self.rotation = rotation

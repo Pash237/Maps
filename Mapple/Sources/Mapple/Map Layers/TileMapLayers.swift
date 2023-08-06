@@ -10,7 +10,7 @@ import Combine
 import CoreLocation
 import Nuke
 
-class TileMapView: UIView {
+class TileMapView: UIView, MapViewLayer {
 	private(set) var offset: Point = .zero
 	private(set) var zoom: Double = 11
 	private(set) var rotation: Radians = 0.0
@@ -42,7 +42,7 @@ class TileMapView: UIView {
 		}
 	}
 	
-	func update(offset: Point, zoom: Double, rotation: Radians) {
+	public func update(offset: Point, zoom: Double, rotation: Radians) {
 		self.offset = offset
 		self.zoom = zoom
 		self.rotation = rotation
