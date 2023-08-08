@@ -31,9 +31,9 @@ public class MapScrollView: UIView {
 	private var previousTouchTravelDistance: CGFloat = 0
 	private var doubleTapDragZooming = false
 	private var doubleTapDragZoomCenter: CGPoint = .zero
-	private let doubleTapDragZoomDelay: TimeInterval = 0.3
+	private let doubleTapDragZoomDelay: TimeInterval = 0.26
 	private let doubleTapDragZoomSpeed = 0.015
-	private let tapHoldDuration = 0.29
+	private let tapHoldDuration = 0.25
 	private var twoFingerTapTimestamp: TimeInterval?
 	private var twoFingerTravelDistance: CGFloat = 0
 	private var doubleTapZoomTimestamp: TimeInterval?
@@ -324,7 +324,7 @@ public class MapScrollView: UIView {
 		let activeTouches = event.activeTouches
 		
 		// zoom out animated with two finger tap gesture
-		if let twoFingerTapTimestamp = twoFingerTapTimestamp, activeTouches.isEmpty, event.timestamp - twoFingerTapTimestamp < 0.3, twoFingerTravelDistance < 4 {
+		if let twoFingerTapTimestamp = twoFingerTapTimestamp, activeTouches.isEmpty, event.timestamp - twoFingerTapTimestamp < doubleTapDragZoomDelay, twoFingerTravelDistance < 4 {
 			let zoomCenterOnMap = offset + bounds.center + ((previousCentroid ?? bounds.center) - bounds.center) * 0.5
 			
 			setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom - 1, rotation: rotation))
