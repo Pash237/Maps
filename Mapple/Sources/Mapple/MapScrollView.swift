@@ -42,6 +42,7 @@ public class MapScrollView: UIView {
 	private var longPressWorkItem: DispatchWorkItem?
 	private var trackingLayer: AnyHashable?
 	
+	private let initialRotationGestureThreshold: Radians = 0.25
 	private var rotationGestureThreshold: Radians = 0.25
 	private var rotationGestureDetected = false
 	private var touchesBeganAngle: Radians?
@@ -261,6 +262,11 @@ public class MapScrollView: UIView {
 				offset -= zoomCenterOnMap * zoomChange
 				
 				twoFingerTravelDistance += abs(previousDistance - distance)
+				rotationGestureThreshold = initialRotationGestureThreshold
+												// the more we zoom, the less we likely to rotate
+												* (1.0 + min(twoFingerTravelDistance, 300.0) * 0.003)
+												// the closer the fingers, the trickier it is to rotate
+												* (1.0 + max(200.0 - distance, 0.0) * 0.003)
 			}
 			
 			if let previousAngle, let touchesBeganAngle {
@@ -335,6 +341,7 @@ public class MapScrollView: UIView {
 			previousAngle = nil
 			touchesBeganAngle = nil
 			rotationGestureDetected = false
+			rotationGestureThreshold = initialRotationGestureThreshold
 		}
 		
 		longPressWorkItem?.cancel()
