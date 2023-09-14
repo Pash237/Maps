@@ -52,6 +52,9 @@ class TileMapView: UIView, MapViewLayer {
 	
 	
 	private func updateLayers() {
+		guard offset != .zero else {
+			return
+		}
 		addRequiredTileLayers()
 		positionTileLayers()
 		removeUnusedTileLayers()
