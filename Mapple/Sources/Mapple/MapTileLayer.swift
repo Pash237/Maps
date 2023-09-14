@@ -9,20 +9,31 @@ import UIKit
 import Nuke
 
 public struct MapTile: Equatable, Hashable {
-	var x: Int
-	var y: Int
-	var zoom: Int
-	var size = 512
+	public var x: Int
+	public var y: Int
+	public var zoom: Int
+	public var size = 512
 	
-	var offset: Point {
-		Point(x: x * size, y: y * size)
-	}
+	private let hash: Int
 	
 	public init(x: Int, y: Int, zoom: Int, size: Int = 512) {
 		self.x = x
 		self.y = y
 		self.zoom = zoom
 		self.size = size
+		self.hash = y * (1 << zoom) + x
+	}
+	
+	public var offset: Point {
+		Point(x: x * size, y: y * size)
+	}
+	
+	public func hash(into hasher: inout Hasher) {
+		hasher.combine(hash)
+	}
+	
+	public static func == (lhs: MapTile, rhs: MapTile) -> Bool {
+		lhs.hash == rhs.hash
 	}
 }
 
@@ -55,8 +66,7 @@ class MapTileLayer: CALayer {
 		anchorPoint = .zero
 		contentsGravity = .resize
 		frame = CGRect(x: 0, y: 0, width: tile.size, height: tile.size)
-		isOpaque = true
-		
+		isOpaque = false
 	}
 	
 	func loadImage(priority: ImageRequest.Priority? = nil) {
