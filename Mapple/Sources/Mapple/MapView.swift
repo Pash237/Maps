@@ -38,7 +38,7 @@ public class MapView: MapScrollView {
 	public var onEndTracking = PassthroughSubject<AnyHashable, Never>()
 	public var trackingLayer: AnyHashable?
 	
-	public var mapLayers: [MapViewLayer]
+	private var mapLayers: [MapViewLayer]
 	
 	private let tileMapView = TileMapView()
 	public let spatialLayers = SpatialMapLayersView()
@@ -127,6 +127,18 @@ public class MapView: MapScrollView {
 		CATransaction.commit()
 	}
 	
+	public func addMapViewLayer(_ layer: MapViewLayer) {
+		mapLayers.append(layer)
+		addSubview(layer)
+		updateLayers()
+	}
+	
+	public func removeMapViewLayer(_ layer: MapViewLayer) {
+		if let index = mapLayers.firstIndex(where: { $0 === layer }) {
+			mapLayers.remove(at: index)
+			layer.removeFromSuperview()
+		}
+	}
 	
 	private var oldBounds: CGRect = .zero
 	public override func layoutSubviews() {
