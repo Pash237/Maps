@@ -18,6 +18,7 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate {
 	
 	private var imagePipeline: ImagePipeline!
 	private let hash: Int
+	private let stringHash: String
 	
 	private static var cachedImageLookup: [TileSource:[MapTile:Bool]] = [:]
 
@@ -27,7 +28,8 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate {
 		self.tileSize = tileSize
 		self.minZoom = minZoom
 		self.maxZoom = maxZoom
-		self.hash = url.hash
+		self.hash = abs(url.hash)
+		self.stringHash = String(hash % 1679616, radix: 36)
 		self.imagePipeline = imagePipeline ?? defaultImagePipeline()
 		
 		if Self.cachedImageLookup[self] == nil {
@@ -144,10 +146,10 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate {
 			let files = (try? FileManager.default.contentsOfDirectory(at: tileCacheDirectory, includingPropertiesForKeys: nil)) ?? []
 			let tiles = files.compactMap {
 				let components = $0.lastPathComponent.components(separatedBy: "_")
-				if components.count == 3,
-				   let x = Int(components[1]),
-				   let y = Int(components[2]),
-				   let z = Int(components[0]) {
+				if components.count == 4,
+				   let x = Int(components[2]),
+				   let y = Int(components[3]),
+				   let z = Int(components[1]) {
 					return MapTile(x: x, y: y, zoom: z, size: tileSize)
 				} else {
 					return nil
@@ -164,7 +166,7 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate {
 	
 	public func cacheKey(for request: ImageRequest, pipeline: ImagePipeline) -> String? {
 		let tile = request.userInfo[.tileKey] as! MapTile
-		return "\(tile.zoom)_\(tile.x)_\(tile.y)"
+		return "\(stringHash)_\(tile.zoom)_\(tile.x)_\(tile.y)"
 	}
 }
 

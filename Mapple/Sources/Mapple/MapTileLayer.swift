@@ -21,7 +21,7 @@ public struct MapTile: Equatable, Hashable {
 		self.y = y
 		self.zoom = zoom
 		self.size = size
-		self.hash = y * (1 << zoom) + x
+		self.hash = (1 << zoom)*(1 << zoom) + y * (1 << zoom) + x
 	}
 	
 	public var offset: Point {
