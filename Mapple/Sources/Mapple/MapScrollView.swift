@@ -13,6 +13,14 @@ public class MapScrollView: UIView {
 	public var zoom: Double = 11
 	public var rotation: Radians = 0.0
 	
+	public var singleTapGestureEnabled = true
+	public var longPressGestureEnabled = true
+	public var dragGestureEnabled = true
+	public var rotationGestureEnabled = true
+	public var doubleTapZoomGestureEnabled = true
+	public var doubleTapDragZoomGestureEnabled = true
+	public var pinchZoomGestureEnabled = true
+	
 	private var previousTouchesCount = 0
 	private var previousCentroidInWindow: CGPoint?
 	private var previousCentroid: CGPoint?
@@ -158,14 +166,14 @@ public class MapScrollView: UIView {
 		}
 		
 		// detect double tap
-		if event.activeTouches.count == 1 && lastTouchTravelDistance < 10 && timeSincePreviousTap < doubleTapDragZoomDelay && abs(centroid.x - lastTouchLocation.x) < 30 && abs(centroid.y - lastTouchLocation.y) < 100 && twoFingerTapTimestamp == nil && doubleTapZoomTimestamp == nil {
+		if event.activeTouches.count == 1 && lastTouchTravelDistance < 10 && timeSincePreviousTap < doubleTapDragZoomDelay && abs(centroid.x - lastTouchLocation.x) < 30 && abs(centroid.y - lastTouchLocation.y) < 100 && twoFingerTapTimestamp == nil && doubleTapZoomTimestamp == nil && doubleTapDragZoomGestureEnabled {
 			doubleTapDragZooming = true
 			doubleTapDragZoomCenter = centroid
 		} else {
 			doubleTapDragZooming = false
 			
 			longPressWorkItem?.cancel()
-			if event.activeTouches.count == 1 {
+			if event.activeTouches.count == 1 && longPressGestureEnabled {
 				longPressWorkItem = DispatchWorkItem(block: {[weak self] in
 					guard let self else { return }
 					if let trackingLayer {
@@ -200,7 +208,8 @@ public class MapScrollView: UIView {
 		
 		endTracking()
 		if event.activeTouches.count == 1,
-		   let layer = trackingLayer(at: centroid) {
+		   let layer = trackingLayer(at: centroid),
+		   singleTapGestureEnabled {
 			trackingLayer = layer
 			onBeginTracking(layer)
 		}
@@ -228,7 +237,7 @@ public class MapScrollView: UIView {
 		let centroid = event.centroid(in: mapContentsView)
 		let centroidInWindow = event.centroid()
 		
-		if previousTouchesCount != allTouches.count {
+		if previousTouchesCount != allTouches.count && (dragGestureEnabled || allTouches.count > 1) {
 			offset += centroid - previousCentroid
 			
 			velocity = .zero
@@ -236,7 +245,7 @@ public class MapScrollView: UIView {
 			timestampToCalculateVelocity = event.timestamp
 		}
 		
-		if !doubleTapDragZooming {
+		if !doubleTapDragZooming && (dragGestureEnabled || allTouches.count > 1) {
 			offset += (previousCentroid - centroid)
 		}
 		
@@ -250,6 +259,7 @@ public class MapScrollView: UIView {
 			let angle = event.angle()!
 			
 			if let previousDistance = previousDistance,
+			   pinchZoomGestureEnabled,
 			   previousTouchesCount == allTouches.count,
 			   abs(previousDistance - distance) < 100 /* deal with sometimes happening touch issues */
 			{
@@ -269,7 +279,7 @@ public class MapScrollView: UIView {
 												* (1.0 + max(200.0 - distance, 0.0) * 0.003)
 			}
 			
-			if let previousAngle, let touchesBeganAngle {
+			if let previousAngle, let touchesBeganAngle, rotationGestureEnabled {
 				if fabs(touchesBeganAngle - angle).inRange > rotationGestureThreshold {
 					rotationGestureDetected = true
 				}
@@ -330,7 +340,7 @@ public class MapScrollView: UIView {
 		let activeTouches = event.activeTouches
 		
 		// zoom out animated with two finger tap gesture
-		if let twoFingerTapTimestamp = twoFingerTapTimestamp, activeTouches.isEmpty, event.timestamp - twoFingerTapTimestamp < doubleTapDragZoomDelay, twoFingerTravelDistance < 4 {
+		if let twoFingerTapTimestamp = twoFingerTapTimestamp, activeTouches.isEmpty, event.timestamp - twoFingerTapTimestamp < doubleTapDragZoomDelay, twoFingerTravelDistance < 4, doubleTapZoomGestureEnabled {
 			let zoomCenterOnMap = offset + bounds.center + ((previousCentroid ?? bounds.center) - bounds.center) * 0.5
 			
 			setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom - 1, rotation: rotation))
@@ -351,7 +361,7 @@ public class MapScrollView: UIView {
 			// zoom in animated with double-tap gesture
 			let timeSincePreviousTap = event.timestamp - lastTouchTimestamp
 			let distanceBetweenLastTwoTouches = (previousTouchEndCentroid ?? .zero).distance(to: previousCentroid ?? .zero)
-			if lastTouchTravelDistance < 30 && previousTouchTravelDistance < 30 && timeSincePreviousTap < doubleTapDragZoomDelay && distanceBetweenLastTwoTouches < 30 && twoFingerTapTimestamp == nil {
+			if lastTouchTravelDistance < 30 && previousTouchTravelDistance < 30 && timeSincePreviousTap < doubleTapDragZoomDelay && distanceBetweenLastTwoTouches < 30 && twoFingerTapTimestamp == nil && doubleTapZoomGestureEnabled {
 				let zoomCenterOnMap = offset + bounds.center + ((previousCentroid ?? bounds.center) - bounds.center) * 0.5
 				doubleTapZoomTimestamp = event.timestamp
 				
@@ -360,7 +370,7 @@ public class MapScrollView: UIView {
 				doubleTapZoomTimestamp = nil
 			}
 			
-			if lastTouchTravelDistance == 0 && timeSinceTouchBegan < tapHoldDuration && (timeSincePreviousTap > doubleTapDragZoomDelay || distanceBetweenLastTwoTouches > 30) {
+			if singleTapGestureEnabled && lastTouchTravelDistance == 0 && timeSinceTouchBegan < tapHoldDuration && (timeSincePreviousTap > doubleTapDragZoomDelay || distanceBetweenLastTwoTouches > 30) {
 				singleTapPossible = true
 				DispatchQueue.main.asyncAfter(deadline: .now() + doubleTapDragZoomDelay + 0.01) {[weak self] in
 					guard let self else { return }
@@ -376,9 +386,11 @@ public class MapScrollView: UIView {
 				velocity = .zero
 			}
 			
-			targetOffset = offset - velocity * 0.1
-			if velocity != .zero {
-				startDecelerating()
+			if dragGestureEnabled {
+				targetOffset = offset - velocity * 0.1
+				if velocity != .zero {
+					startDecelerating()
+				}
 			}
 			
 			previousTouchEndCentroid = previousCentroid
