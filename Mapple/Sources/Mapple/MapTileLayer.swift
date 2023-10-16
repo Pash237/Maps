@@ -37,7 +37,7 @@ public struct MapTile: Equatable, Hashable {
 	}
 }
 
-extension Notification.Name {
+public extension Notification.Name {
 	static let mapTileLoaded = NSNotification.Name("MapTileLoaded")
 }
 
@@ -79,7 +79,7 @@ class MapTileLayer: CALayer {
 				self.contents = cgImage
 				self.loadState = .loaded
 				self.imageTask = nil
-				NotificationCenter.default.post(name: .mapTileLoaded, object: self)
+				NotificationCenter.default.post(name: .mapTileLoaded, object: self, userInfo: ["x": tile.x, "y": tile.y, "zoom": tile.zoom])
 			} catch ImagePipeline.Error.dataLoadingFailed(let loadError) {
 				self.imageTask = nil
 				
@@ -89,7 +89,7 @@ class MapTileLayer: CALayer {
 				if case let .statusCodeUnacceptable(statusCode) = loadError as? DataLoader.Error, statusCode == 404 || statusCode == 400 {
 					//TODO: remember that this tile is failed and don't try to load it next time
 					self.loadState = .failed
-					NotificationCenter.default.post(name: .mapTileLoaded, object: self)
+					NotificationCenter.default.post(name: .mapTileLoaded, object: self, userInfo: ["x": tile.x, "y": tile.y, "zoom": tile.zoom, "error": loadError])
 				} else {
 					self.loadState = .failedNeedsRetry
 				}
