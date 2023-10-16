@@ -22,7 +22,7 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate {
 	
 	private static var cachedImageLookup: [TileSource:[MapTile:Bool]] = [:]
 
-	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 0, maxZoom: Int = 22, imagePipeline: ImagePipeline? = nil) {
+	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 0, maxZoom: Int = 20, imagePipeline: ImagePipeline? = nil) {
 		self.title = title
 		self.url = url
 		self.tileSize = tileSize
