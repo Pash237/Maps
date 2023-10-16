@@ -54,6 +54,7 @@ public class MapScrollView: UIView {
 	private var rotationGestureThreshold: Radians = 0.25
 	private var rotationGestureDetected = false
 	private var touchesBeganAngle: Radians?
+	private var touchesBeganDistance: Double?
 	private var previousAngle: Radians?
 	
 	private var touchesBeganTimestamps: [Int: TimeInterval] = [:]
@@ -195,6 +196,7 @@ public class MapScrollView: UIView {
 		
 		if event.activeTouches.count == 2 {
 			touchesBeganAngle = event.angle()
+			touchesBeganDistance = event.activeTouches[0].location(in: nil).distance(to: event.activeTouches[1].location(in: nil))
 			previousAngle = touchesBeganAngle
 		}
 		
@@ -258,7 +260,8 @@ public class MapScrollView: UIView {
 			let distance = allTouches[0].location(in: nil).distance(to: allTouches[1].location(in: nil))
 			let angle = event.angle()!
 			
-			if let previousDistance = previousDistance,
+			if let previousDistance,
+			   let touchesBeganDistance,
 			   pinchZoomGestureEnabled,
 			   previousTouchesCount == allTouches.count,
 			   abs(previousDistance - distance) < 100 /* deal with sometimes happening touch issues */
@@ -273,10 +276,14 @@ public class MapScrollView: UIView {
 				
 				twoFingerTravelDistance += abs(previousDistance - distance)
 				rotationGestureThreshold = initialRotationGestureThreshold
-												// the more we zoom, the less we likely to rotate
-												* (1.0 + min(twoFingerTravelDistance, 300.0) * 0.003)
-												// the closer the fingers, the trickier it is to rotate
-												* (1.0 + max(200.0 - distance, 0.0) * 0.003)
+				if !rotationGestureDetected {
+					// the more we zoom, the less we likely to rotate
+					rotationGestureThreshold *= (1.0 + min(twoFingerTravelDistance, 350.0) * 0.003)
+					// the closer the fingers, the trickier it is to rotate
+					rotationGestureThreshold *= (1.0 + max(260.0 - distance, 0.0) * 0.005)
+					// the less we change distance between fingers, the more we likely want to rotate
+					rotationGestureThreshold *= (1.0 + min(max(0, abs(distance - touchesBeganDistance) - 100), 200.0) * 0.005)
+				}
 			}
 			
 			if let previousAngle, let touchesBeganAngle, rotationGestureEnabled {
