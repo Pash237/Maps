@@ -17,12 +17,12 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate {
 	public let maxZoom: Int
 	
 	private var imagePipeline: ImagePipeline!
-	private let hash: Int
-	private let stringHash: String
+	public let hash: Int
+	public let stringHash: String
 	
 	private static var cachedImageLookup: [TileSource:[MapTile:Bool]] = [:]
 
-	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 0, maxZoom: Int = 20, imagePipeline: ImagePipeline? = nil) {
+	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, imagePipeline: ImagePipeline? = nil) {
 		self.title = title
 		self.url = url
 		self.tileSize = tileSize
@@ -61,6 +61,7 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate {
 		hasher.combine(hash)
 	}
 	
+	@discardableResult
 	public func loadImage(for tile: MapTile, completion: @escaping ((_ result: Result<ImageResponse, ImagePipeline.Error>) -> Void)) -> ImageTask {
 		let url = url(for: tile)
 		var request = ImageRequest(url: url)
@@ -111,7 +112,7 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate {
 		lhs.hash == rhs.hash
 	}
 	
-	private var tileCacheDirectory: URL {
+	public var tileCacheDirectory: URL {
 		FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first!
 			.appendingPathComponent("TileCache", isDirectory: true)
 			.appendingPathComponent(title, isDirectory: true)
@@ -162,6 +163,15 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate {
 				}
 			}
 		}
+	}
+	
+	public var zoomRange: ClosedRange<Int> {
+		let minZoom = minZoom
+		let maxZoom = maxZoom
+		guard maxZoom >= minZoom else {
+			return maxZoom...maxZoom
+		}
+		return minZoom...maxZoom
 	}
 	
 	public func cacheKey(for request: ImageRequest, pipeline: ImagePipeline) -> String? {
