@@ -142,8 +142,8 @@ extension SpatialMapLayersView {
 			let layer = layer ?? CALayer()
 			
 			let insetBounds = bounds.insetBy(dx: -bounds.width*1.5, dy: -bounds.height*1.5)
-			let visibleCoordinateBounds = CoordinateBounds(northeast: self.coordinates(at: CGPoint(insetBounds.width, 0)),
-														   southwest: self.coordinates(at: CGPoint(0, insetBounds.height)))
+			let visibleCoordinateBounds = CoordinateBounds(northeast: self.coordinates(at: CGPoint(insetBounds.maxX, insetBounds.minY)),
+														   southwest: self.coordinates(at: CGPoint(insetBounds.minX, insetBounds.maxY)))
 			
 			guard visibleCoordinateBounds.intersects(with: layerCoordinateBounds) else {
 				return layer

@@ -151,7 +151,14 @@ public class PointMapLayersView: UIView, MapViewLayer {
 	}
 	
 	private func positionDrawingLayers() {
-		drawingLayers.values.forEach(positionDrawingLayer)
+		let insetBounds = bounds.insetBy(dx: -bounds.width*1.5, dy: -bounds.height*1.5)
+		let visibleCoordinateBounds = CoordinateBounds(northeast: self.coordinates(at: CGPoint(insetBounds.maxX, insetBounds.minY)),
+													   southwest: self.coordinates(at: CGPoint(insetBounds.minX, insetBounds.maxY)))
+		drawingLayers.values.filter { visibleCoordinateBounds.contains($0.coordinates) }.forEach(positionDrawingLayer)
+	}
+		
+	private func coordinates(at screenPoint: Point) -> Coordinates {
+		projection.coordinates(from: offset + screenPoint, at: zoom)
 	}
 	
 }
