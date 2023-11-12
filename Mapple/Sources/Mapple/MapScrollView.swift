@@ -13,6 +13,20 @@ public class MapScrollView: UIView {
 	public var zoom: Double = 11
 	public var rotation: Radians = 0.0
 	
+	public var contentInset: UIEdgeInsets = .zero {
+		didSet {
+			if oldValue != .zero && contentInset != oldValue {
+				// keep map center in the center when content insets changes
+				// TODO: animation with frequently changed target does not work correctly with Motion
+				// TODO: keep just-touched map region on screen
+				// TODO: do not animate when not needed
+//				let oldBounds = bounds.inset(by: oldValue)
+//				let cameraAtOldCenter = Camera(center: coordinates(at: oldBounds.center), zoom: zoom)
+//				setCamera(cameraAtOldCenter, animated: true)
+			}
+		}
+	}
+	
 	public var singleTapGestureEnabled = true
 	public var longPressGestureEnabled = true
 	public var dragGestureEnabled = true
@@ -65,10 +79,10 @@ public class MapScrollView: UIView {
 	
 	public var camera: Camera {
 		get {
-			return Camera(center: coordinates(at: bounds.center), zoom: animation.toValue.zoom, rotation: animation.toValue.rotation)
+			return Camera(center: coordinates(at: contentBounds.center), zoom: animation.toValue.zoom, rotation: animation.toValue.rotation)
 		}
 		set {
-			guard !newValue.zoom.isNearlyEqual(to: zoom) || !newValue.center.isNearlyEqual(to: coordinates(at: bounds.center)) || !newValue.rotation.isNearlyEqual(to: rotation) else {
+			guard !newValue.zoom.isNearlyEqual(to: zoom) || !newValue.center.isNearlyEqual(to: coordinates(at: contentBounds.center)) || !newValue.rotation.isNearlyEqual(to: rotation) else {
 				// nothing's changed — don't animate
 				return
 			}
@@ -106,7 +120,7 @@ public class MapScrollView: UIView {
 	func updateOffset(to camera: Camera) {
 		stopDecelerating()
 		zoom = camera.zoom
-		offset = point(at: camera.center) - bounds.center
+		offset = point(at: camera.center) - contentBounds.center
 		rotation = camera.rotation.inRange
 	}
 	
@@ -134,8 +148,8 @@ public class MapScrollView: UIView {
 	}
 	
 	public var coordinateBounds: CoordinateBounds {
-		CoordinateBounds(northeast: coordinates(at: CGPoint(bounds.width, 0)),
-						 southwest: coordinates(at: CGPoint(0, bounds.height)))
+		CoordinateBounds(northeast: coordinates(at: CGPoint(contentBounds.width, 0)),
+						 southwest: coordinates(at: CGPoint(0, contentBounds.height)))
 	}
 	
 	required init?(coder: NSCoder) {
@@ -348,7 +362,7 @@ public class MapScrollView: UIView {
 		
 		// zoom out animated with two finger tap gesture
 		if let twoFingerTapTimestamp = twoFingerTapTimestamp, activeTouches.isEmpty, event.timestamp - twoFingerTapTimestamp < doubleTapDragZoomDelay, twoFingerTravelDistance < 4, doubleTapZoomGestureEnabled {
-			let zoomCenterOnMap = offset + bounds.center + ((previousCentroid ?? bounds.center) - bounds.center) * 0.5
+			let zoomCenterOnMap = offset + contentBounds.center + ((previousCentroid ?? contentBounds.center) - contentBounds.center) * 0.5
 			
 			setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom - 1, rotation: rotation))
 		}
@@ -369,7 +383,7 @@ public class MapScrollView: UIView {
 			let timeSincePreviousTap = event.timestamp - lastTouchTimestamp
 			let distanceBetweenLastTwoTouches = (previousTouchEndCentroid ?? .zero).distance(to: previousCentroid ?? .zero)
 			if lastTouchTravelDistance < 30 && previousTouchTravelDistance < 30 && timeSincePreviousTap < doubleTapDragZoomDelay && distanceBetweenLastTwoTouches < 30 && twoFingerTapTimestamp == nil && doubleTapZoomGestureEnabled {
-				let zoomCenterOnMap = offset + bounds.center + ((previousCentroid ?? bounds.center) - bounds.center) * 0.5
+				let zoomCenterOnMap = offset + contentBounds.center + ((previousCentroid ?? contentBounds.center) - contentBounds.center) * 0.5
 				doubleTapZoomTimestamp = event.timestamp
 				
 				setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom + 1, rotation: rotation))
@@ -493,6 +507,10 @@ public class MapScrollView: UIView {
 	
 	func onEndTracking(_ trackingLayer: AnyHashable) {
 		// override if necessary
+	}
+	
+	var contentBounds: CGRect {
+		bounds.inset(by: contentInset)
 	}
 }
 
