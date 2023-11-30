@@ -46,7 +46,6 @@ public class PointMapLayersView: UIView, MapViewLayer {
 	private var drawingLayers: Dictionary<AnyHashable, PointMapLayer> = [:]
 	private var drawnLayerOffset: CGPoint = .zero
 	private var drawnLayerZoom: Double = 11
-	private var drawingViews: Dictionary<AnyHashable, UIView> = [:]
 	
 	override init(frame: CGRect) {
 		super.init(frame: frame)
@@ -134,6 +133,8 @@ public class PointMapLayersView: UIView, MapViewLayer {
 	
 	func layerIds(at coordinates: Coordinates, threshold: CGFloat = 30.0) -> [(key: AnyHashable, distance: CGFloat)] {
 		drawingLayers.compactMap { key, layer in
+			guard !layer.isHidden else { return nil }
+			
 			let point = projection.point(at: zoom, from: coordinates) - offset
 			let distance = layer.position.distance(to: point)
 			if distance < threshold {
@@ -154,7 +155,17 @@ public class PointMapLayersView: UIView, MapViewLayer {
 		let insetBounds = bounds.insetBy(dx: -bounds.width*1.5, dy: -bounds.height*1.5)
 		let visibleCoordinateBounds = CoordinateBounds(northeast: self.coordinates(at: CGPoint(insetBounds.maxX, insetBounds.minY)),
 													   southwest: self.coordinates(at: CGPoint(insetBounds.minX, insetBounds.maxY)))
-		drawingLayers.values.filter { visibleCoordinateBounds.contains($0.coordinates) }.forEach(positionDrawingLayer)
+		
+		for layer in drawingLayers.values {
+			if visibleCoordinateBounds.contains(layer.coordinates) {
+				positionDrawingLayer(layer)
+				if layer.isHidden {
+					layer.isHidden = false
+				}
+			} else if !layer.isHidden {
+				layer.isHidden = true
+			}
+		}
 	}
 		
 	private func coordinates(at screenPoint: Point) -> Coordinates {

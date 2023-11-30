@@ -17,7 +17,6 @@ public class SpatialMapLayersView: UIView, MapViewLayer {
 	private var drawingLayers: Dictionary<AnyHashable, CALayer> = [:]
 	private var drawnLayerOffset: CGPoint = .zero
 	private var drawnLayerZoom: Double = 11
-	private var drawingViews: Dictionary<AnyHashable, UIView> = [:]
 	
 	override init(frame: CGRect) {
 		super.init(frame: frame)
