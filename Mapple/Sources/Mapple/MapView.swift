@@ -76,33 +76,28 @@ public class MapView: MapScrollView {
 	
 	private var tileSize: Int { tileSources[0].tileSize }
 	
-	override func updateOffset(to camera: Camera) {
-		super.updateOffset(to: camera)
+	override func updateOffset(to camera: Camera, reason: ScrollReason) {
+		super.updateOffset(to: camera, reason: reason)
 		
-		updateLayers()
-		onScroll.send(.cameraUpdate)
-	}
-	
-	override func didScroll() {
-//		print("did scroll, zoom: \(zoom), offset: \(offset.pretty), angle: \(rotation)°")
+		print("did scroll, \(reason) zoom: \(zoom), offset: \(offset.pretty), angle: \(rotation)°")
 		
 		let minZoom = UIScreen.main.bounds.height/2 / Double(tileSize)
 		if zoom < minZoom {
 			zoom = minZoom
-			stopDecelerating()
+			stopAnimating()
 		}
 
 		if offset.y < 0 {
 			offset.y = 0
-			stopDecelerating()
+			stopAnimating()
 		}
 		if offset.y > mapWidth - bounds.height {
 			offset.y = mapWidth - bounds.height
-			stopDecelerating()
+			stopAnimating()
 		}
 		
 		updateLayers()
-		onScroll.send(.drag)
+		onScroll.send(reason)
 	}
 	
 	private var mapWidth: Double {

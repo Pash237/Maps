@@ -21,8 +21,7 @@ public struct Camera: Codable {
 		self.rotation = rotation
 	}
 	
-	public static func fitting(_ coordinateBounds: CoordinateBounds, with bounds: CGRect, padding: Double = 0, projection: Projection = SphericalMercator()) -> Camera {
-		let maxZoom = 20.0
+	public static func fitting(_ coordinateBounds: CoordinateBounds, with bounds: CGRect, padding: Double = 0, maxZoom: Double = 17.0, projection: Projection = SphericalMercator()) -> Camera {
 		let boundsAtMaxZoom = projection.point(at: maxZoom, from: coordinateBounds.southeast) - projection.point(at: maxZoom, from: coordinateBounds.northwest)
 		
 		let scale: Double = max(
@@ -68,5 +67,27 @@ public struct Camera: Codable {
 		var camera = self
 		camera.rotation = rotation
 		return camera
+	}
+}
+
+
+extension Camera {
+	func withRotationClose(to rotation: Radians) -> Camera {
+		var adjusted = self
+
+		while abs(adjusted.rotation - rotation + 2.0 * .pi) < abs(adjusted.rotation - rotation)  {
+			adjusted.rotation += 2.0 * .pi
+		}
+		while abs(adjusted.rotation - rotation - 2.0 * .pi) < abs(adjusted.rotation - rotation)  {
+			adjusted.rotation -= 2.0 * .pi
+		}
+		return adjusted
+	}
+	
+	public func isNearlyEqual(to camera: Camera) -> Bool {
+		abs(center.latitude - camera.center.latitude) < 0.000001 &&
+		abs(center.longitude - camera.center.longitude) < 0.000001 &&
+		abs(zoom - camera.zoom) < 0.001 &&
+		abs(rotation - camera.rotation) < 0.001
 	}
 }

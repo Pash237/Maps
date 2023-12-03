@@ -6,7 +6,6 @@
 //
 
 import UIKit
-import Motion
 
 public class MapScrollView: UIView {
 	public var offset: Point = .zero
@@ -17,9 +16,7 @@ public class MapScrollView: UIView {
 		didSet {
 			if oldValue != .zero && contentInset != oldValue {
 				// keep map center in the center when content insets changes
-				// TODO: animation with frequently changed target does not work correctly with Motion
 				// TODO: keep just-touched map region on screen
-				// TODO: do not animate when not needed
 //				let oldBounds = bounds.inset(by: oldValue)
 //				let cameraAtOldCenter = Camera(center: coordinates(at: oldBounds.center), zoom: zoom)
 //				setCamera(cameraAtOldCenter, animated: true)
@@ -43,7 +40,7 @@ public class MapScrollView: UIView {
 	private var centroidToCalculateVelocity: CGPoint?
 	private var timestampToCalculateVelocity: TimeInterval?
 	private var velocity: CGPoint = .zero
-	private var targetOffset: Point = .zero
+	public private(set) var targetCamera: Camera
 	private var displayLink: CADisplayLink?
 	
 	private var lastTouchTimestamp: TimeInterval = 0
@@ -73,67 +70,54 @@ public class MapScrollView: UIView {
 	
 	private var touchesBeganTimestamps: [Int: TimeInterval] = [:]
 	
-	private var animation = SpringAnimation<Camera>(response: 0.4, dampingRatio: 1.0)
-	
 	public var projection = SphericalMercator()
 	
 	public var camera: Camera {
 		get {
-			return Camera(center: coordinates(at: contentBounds.center), zoom: animation.toValue.zoom, rotation: animation.toValue.rotation)
+			return Camera(center: coordinates(at: contentBounds.center), zoom: zoom, rotation: rotation)
 		}
 		set {
-			guard !newValue.zoom.isNearlyEqual(to: zoom) || !newValue.center.isNearlyEqual(to: coordinates(at: contentBounds.center)) || !newValue.rotation.isNearlyEqual(to: rotation) else {
-				// nothing's changed — don't animate
-				return
-			}
-			var value = newValue
-			if newValue.zoom == zoom && animation.toValue.zoom != 0 {
-				// if we doesn't seem to change zoom, use target zoom value
-				value.zoom = animation.toValue.zoom
-			}
-			
-			if animation.hasResolved() {
-				animation.toValue = value.withRotationClose(to: animation.toValue)
-				animation.stop(resolveImmediately: true, postValueChanged: true)
-			} else {
-				// if we have ongoing animation, redirect it to a new location
-				//TODO: this may result in infinite animation if camera updates are more frequent than animation duration
-				animation.toValue = value.withRotationClose(to: animation.toValue)
-			}
+			targetCamera = newValue
+			updateOffset(to: targetCamera, reason: .cameraUpdate)
 		}
 	}
 	
 	init(frame: CGRect, camera: Camera) {
+		self.targetCamera = camera
 		super.init(frame: frame)
 		
 		isMultipleTouchEnabled = true
 		backgroundColor = .black
 
 		self.camera = camera
-		updateOffset(to: camera)
-		
-		animation.resolvingEpsilon = 0.0001
-		animation.onValueChanged { [weak self] in self?.updateOffset(to: $0) }
+		updateOffset(to: camera, reason: .cameraUpdate)
 	}
 	
 	
-	func updateOffset(to camera: Camera) {
-		stopDecelerating()
+	func updateOffset(to camera: Camera, reason: ScrollReason) {
 		zoom = camera.zoom
 		offset = point(at: camera.center) - contentBounds.center
 		rotation = camera.rotation.inRange
 	}
 	
 	public func setCamera(_ newCamera: Camera, animated: Bool = true) {
+		let targetCamera = newCamera.withRotationClose(to: camera.rotation)
+		var animated = animated
+		if animated {
+			let tooFar = (point(at: targetCamera.center) - point(at: camera.center)).maxDimension > max(bounds.width, bounds.height) * 3
+			if tooFar {
+				animated = false
+			}
+		}
+		
 		guard animated else {
-			camera = newCamera.withRotationClose(to: camera)
+			self.targetCamera = targetCamera
+			updateOffset(to: targetCamera, reason: .cameraUpdate)
 			return
 		}
 		
-		animation.updateValue(to: camera)
-		animation.toValue = newCamera.withRotationClose(to: camera)
-		
-		animation.start()
+		self.targetCamera = targetCamera
+		startAnimatingToTarget()
 	}
 	
 	public func coordinates(at screenPoint: Point) -> Coordinates {
@@ -154,10 +138,6 @@ public class MapScrollView: UIView {
 	
 	required init?(coder: NSCoder) {
 		fatalError("init(coder:) has not been implemented")
-	}
-	
-	func didScroll() {
-		
 	}
 	
 	public override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -214,7 +194,7 @@ public class MapScrollView: UIView {
 			previousAngle = touchesBeganAngle
 		}
 		
-		targetOffset = offset
+		targetCamera = camera
 		velocity = .zero
 		centroidToCalculateVelocity = centroid
 		timestampToCalculateVelocity = event.timestamp
@@ -236,7 +216,7 @@ public class MapScrollView: UIView {
 			// but if we're zooming in with double-tap gesture, we might want to triple-tap,
 			// and this zoom animation should resume without stopping
 		} else {
-			animation.stop()
+			stopAnimating()
 		}
 	}
 	
@@ -335,11 +315,9 @@ public class MapScrollView: UIView {
 			lastTouchTravelDistance += (previousCentroid - centroid).length
 		}
 		
-		targetOffset = offset
-		animation.toValue.zoom = zoom
-		animation.toValue.rotation = rotation
-		animation.stop()
-		didScroll()
+		targetCamera = camera
+		updateOffset(to: targetCamera, reason: .drag)
+		stopAnimating()
 		
 		self.previousCentroid = centroid
 		self.previousCentroidInWindow = centroidInWindow
@@ -364,7 +342,7 @@ public class MapScrollView: UIView {
 		if let twoFingerTapTimestamp = twoFingerTapTimestamp, activeTouches.isEmpty, event.timestamp - twoFingerTapTimestamp < doubleTapDragZoomDelay, twoFingerTravelDistance < 4, doubleTapZoomGestureEnabled {
 			let zoomCenterOnMap = offset + contentBounds.center + ((previousCentroid ?? contentBounds.center) - contentBounds.center) * 0.5
 			
-			setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom - 1, rotation: rotation))
+			setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom - 1, rotation: rotation), animated: true)
 		}
 		
 		if activeTouches.count < 2 {
@@ -386,7 +364,7 @@ public class MapScrollView: UIView {
 				let zoomCenterOnMap = offset + contentBounds.center + ((previousCentroid ?? contentBounds.center) - contentBounds.center) * 0.5
 				doubleTapZoomTimestamp = event.timestamp
 				
-				setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom + 1, rotation: rotation))
+				setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom + 1, rotation: rotation), animated: true)
 			} else {
 				doubleTapZoomTimestamp = nil
 			}
@@ -407,10 +385,12 @@ public class MapScrollView: UIView {
 				velocity = .zero
 			}
 			
-			if dragGestureEnabled {
-				targetOffset = offset - velocity * 0.1
+			if dragGestureEnabled, doubleTapZoomTimestamp == nil {
+				targetCamera = Camera(center: coordinates(at: contentBounds.center - velocity*0.1),
+									  zoom: zoom,
+									  rotation: rotation)
 				if velocity != .zero {
-					startDecelerating()
+					startAnimatingToTarget()
 				}
 			}
 			
@@ -458,27 +438,38 @@ public class MapScrollView: UIView {
 		self
 	}
 	
-	private func startDecelerating() {
+	private func startAnimatingToTarget() {
 		displayLink?.invalidate()
-		displayLink = CADisplayLink(target: self, selector: #selector(decelerate))
+		displayLink = CADisplayLink(target: self, selector: #selector(onDisplayLink))
 		displayLink?.add(to: .current, forMode: .common)
 	}
 	
-	func stopDecelerating() {
+	func stopAnimating() {
 		guard displayLink != nil else {
 			return
 		}
-		targetOffset = offset
 		displayLink?.invalidate()
 		displayLink = nil
 	}
 	
-	@objc private func decelerate() {
-		offset += (targetOffset - offset) * 0.15
-		didScroll()
+	private var cameraIsOnTarget: Bool {
+		abs(targetCamera.center.latitude - camera.center.latitude) < 0.00001 &&
+		abs(targetCamera.center.longitude - camera.center.longitude) < 0.00001 &&
+		abs(targetCamera.zoom - camera.zoom) < 0.01 &&
+		abs(targetCamera.rotation - camera.rotation) < 0.01
+	}
+	
+	@objc private func onDisplayLink() {
+		var nextCamera = camera
+		nextCamera.center += (targetCamera.center - camera.center) * 0.15
+		nextCamera.zoom += (targetCamera.zoom - zoom) * 0.15
+		nextCamera.rotation += (targetCamera.withRotationClose(to: rotation).rotation - rotation) * 0.15
 		
-		if (offset - targetOffset).length < 5 {
-			stopDecelerating()
+		updateOffset(to: nextCamera, reason: .animation)
+		
+		if camera.isNearlyEqual(to: targetCamera) {
+			camera = targetCamera
+			stopAnimating()
 		}
 	}
 	
@@ -510,21 +501,10 @@ public class MapScrollView: UIView {
 	}
 	
 	var contentBounds: CGRect {
-		bounds.inset(by: contentInset)
-	}
-}
-
-
-private extension Camera {
-	func withRotationClose(to camera: Camera) -> Camera {
-		var adjusted = self
-
-		while abs(adjusted.rotation - camera.rotation + 2.0 * .pi) < abs(adjusted.rotation - camera.rotation)  {
-			adjusted.rotation += 2.0 * .pi
+		var contentInset = contentInset
+		if contentInset.bottom > bounds.height*0.5 {
+			contentInset.bottom = bounds.height*0.5
 		}
-		while abs(adjusted.rotation - camera.rotation - 2.0 * .pi) < abs(adjusted.rotation - camera.rotation)  {
-			adjusted.rotation -= 2.0 * .pi
-		}
-		return adjusted
+		return bounds.inset(by: contentInset)
 	}
 }
