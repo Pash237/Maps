@@ -22,6 +22,11 @@ public struct Camera: Codable {
 	}
 	
 	public static func fitting(_ coordinateBounds: CoordinateBounds, with bounds: CGRect, padding: Double = 0, maxZoom: Double = 17.0, projection: Projection = SphericalMercator()) -> Camera {
+		guard abs(coordinateBounds.southwest.latitude - coordinateBounds.northeast.latitude) > 0.000001,
+			  abs(coordinateBounds.southwest.longitude - coordinateBounds.northeast.longitude) > 0.000001 else {
+			print("Warning! Could not fit \(coordinateBounds)")
+			return Camera(center: coordinateBounds.center, zoom: 15)
+		}
 		let boundsAtMaxZoom = projection.point(at: maxZoom, from: coordinateBounds.southeast) - projection.point(at: maxZoom, from: coordinateBounds.northwest)
 		
 		let scale: Double = max(
