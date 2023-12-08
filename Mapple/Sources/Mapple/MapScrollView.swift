@@ -272,11 +272,11 @@ public class MapScrollView: UIView {
 				rotationGestureThreshold = initialRotationGestureThreshold
 				if !rotationGestureDetected {
 					// the more we zoom, the less we likely to rotate
-					rotationGestureThreshold *= (1.0 + min(twoFingerTravelDistance, 350.0) * 0.003)
+					rotationGestureThreshold *= (1.0 + min(twoFingerTravelDistance, 500.0) * 0.003)
 					// the closer the fingers, the trickier it is to rotate
 					rotationGestureThreshold *= (1.0 + max(260.0 - distance, 0.0) * 0.005)
 					// the less we change distance between fingers, the more we likely want to rotate
-					rotationGestureThreshold *= (1.0 + min(max(0, abs(distance - touchesBeganDistance) - 100), 200.0) * 0.005)
+					rotationGestureThreshold *= (1.0 + min(max(0, abs(distance - touchesBeganDistance) - 20), 200.0) * 0.008)
 				}
 			}
 			
