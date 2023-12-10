@@ -87,17 +87,28 @@ public class MapScrollView: UIView {
 		updateOffset(to: camera, reason: .cameraUpdate)
 	}
 	
+	
+	private var oldOffset: Point = .zero
+	private var oldZoom: Double = 0
+	private var oldRotation: Radians = -10000
+	
 	func updateOffset(to camera: Camera, reason: ScrollReason) {
 		self.camera = camera
 		zoom = camera.zoom
 		offset = point(at: camera.center) - contentBounds.center
 		rotation = camera.rotation.inRange
 		
-		didScroll(reason: reason)
+		if oldZoom != zoom || oldRotation != rotation || oldOffset.distance(to: offset) > 0.2 {
+			didScroll(reason: reason)
+		} else {
+			// movement is too small — do not fire didScroll event
+		}
 	}
 	
 	func didScroll(reason: ScrollReason) {
-		
+		oldOffset = offset
+		oldZoom = zoom
+		oldRotation = rotation
 	}
 	
 	public func setCamera(_ newCamera: Camera, animated: Bool = true) {
