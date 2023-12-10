@@ -78,15 +78,17 @@ public class MapView: MapScrollView {
 	
 	override func updateOffset(to camera: Camera, reason: ScrollReason) {
 		super.updateOffset(to: camera, reason: reason)
-		
-		print("did scroll, \(reason) zoom: \(zoom), offset: \(offset.pretty), angle: \(rotation)°")
+	}
+	
+	override func didScroll(reason: ScrollReason) {
+		super.didScroll(reason: reason)
 		
 		let minZoom = UIScreen.main.bounds.height/2 / Double(tileSize)
 		if zoom < minZoom {
 			zoom = minZoom
 			stopAnimating()
 		}
-
+		
 		if offset.y < 0 {
 			offset.y = 0
 			stopAnimating()

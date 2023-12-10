@@ -15,6 +15,8 @@ public class MapScrollView: UIView {
 	public var contentInset: UIEdgeInsets = .zero {
 		didSet {
 			if oldValue != .zero && contentInset != oldValue {
+				camera = currentCamera()
+				
 				// keep map center in the center when content insets changes
 				// TODO: keep just-touched map region on screen
 //				let oldBounds = bounds.inset(by: oldValue)
@@ -72,32 +74,30 @@ public class MapScrollView: UIView {
 	
 	public var projection = SphericalMercator()
 	
-	public var camera: Camera {
-		get {
-			return Camera(center: coordinates(at: contentBounds.center), zoom: zoom, rotation: rotation)
-		}
-		set {
-			targetCamera = newValue
-			updateOffset(to: targetCamera, reason: .cameraUpdate)
-		}
-	}
+	public private(set) var camera: Camera
 	
 	init(frame: CGRect, camera: Camera) {
 		self.targetCamera = camera
+		self.camera = camera
 		super.init(frame: frame)
 		
 		isMultipleTouchEnabled = true
 		backgroundColor = .black
-
-		self.camera = camera
+		
 		updateOffset(to: camera, reason: .cameraUpdate)
 	}
 	
-	
 	func updateOffset(to camera: Camera, reason: ScrollReason) {
+		self.camera = camera
 		zoom = camera.zoom
 		offset = point(at: camera.center) - contentBounds.center
 		rotation = camera.rotation.inRange
+		
+		didScroll(reason: reason)
+	}
+	
+	func didScroll(reason: ScrollReason) {
+		
 	}
 	
 	public func setCamera(_ newCamera: Camera, animated: Bool = true) {
@@ -118,6 +118,10 @@ public class MapScrollView: UIView {
 		
 		self.targetCamera = targetCamera
 		startAnimatingToTarget()
+	}
+	
+	private func currentCamera() -> Camera {
+		Camera(center: coordinates(at: contentBounds.center), zoom: zoom, rotation: rotation)
 	}
 	
 	public func coordinates(at screenPoint: Point) -> Coordinates {
@@ -194,6 +198,7 @@ public class MapScrollView: UIView {
 			previousAngle = touchesBeganAngle
 		}
 		
+		camera = currentCamera()
 		targetCamera = camera
 		velocity = .zero
 		centroidToCalculateVelocity = centroid
@@ -315,8 +320,9 @@ public class MapScrollView: UIView {
 			lastTouchTravelDistance += (previousCentroid - centroid).length
 		}
 		
+		camera = currentCamera()
 		targetCamera = camera
-		updateOffset(to: targetCamera, reason: .drag)
+		didScroll(reason: .drag)
 		stopAnimating()
 		
 		self.previousCentroid = centroid
