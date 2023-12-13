@@ -16,6 +16,7 @@ public class MapScrollView: UIView {
 		didSet {
 			if oldValue != .zero && contentInset != oldValue {
 				camera = currentCamera()
+				targetCamera = camera
 				
 				// keep map center in the center when content insets changes
 				// TODO: keep just-touched map region on screen
@@ -77,6 +78,8 @@ public class MapScrollView: UIView {
 	public private(set) var camera: Camera
 	
 	init(frame: CGRect, camera: Camera) {
+		print("init map with \(camera)")
+		
 		self.targetCamera = camera
 		self.camera = camera
 		super.init(frame: frame)
@@ -456,6 +459,9 @@ public class MapScrollView: UIView {
 	}
 	
 	private func startAnimatingToTarget() {
+		guard displayLink == nil else {
+			return
+		}
 		displayLink?.invalidate()
 		displayLink = CADisplayLink(target: self, selector: #selector(onDisplayLink))
 		displayLink?.add(to: .current, forMode: .common)
@@ -517,7 +523,7 @@ public class MapScrollView: UIView {
 		// override if necessary
 	}
 	
-	var contentBounds: CGRect {
+	public var contentBounds: CGRect {
 		var contentInset = contentInset
 		if contentInset.bottom > bounds.height*0.5 {
 			contentInset.bottom = bounds.height*0.5
