@@ -44,7 +44,6 @@ public class MapScrollView: UIView {
 	private var timestampToCalculateVelocity: TimeInterval?
 	private var velocity: CGPoint = .zero
 	public private(set) var targetCamera: Camera
-	private var displayLink: CADisplayLink?
 	
 	private var lastTouchTimestamp: TimeInterval = 0
 	private var lastTouchLocation: CGPoint = .zero
@@ -76,6 +75,26 @@ public class MapScrollView: UIView {
 	public var projection = SphericalMercator()
 	
 	public private(set) var camera: Camera
+	
+	private lazy var animationDisplayLink: CADisplayLink = {
+		let displayLink = CADisplayLink(target: self, selector: #selector(onDisplayLink(_:)))
+		displayLink.add(to: .current, forMode: .common)
+		if #available(iOS 15.0, *) {
+			displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
+		}
+		displayLink.isPaused = true
+		return displayLink
+	}()
+	
+	private lazy var draggingDisplayLink: CADisplayLink = {
+		let displayLink = CADisplayLink(target: self, selector: #selector(onDraggingDisplayLink(_:)))
+		displayLink.add(to: .current, forMode: .common)
+		if #available(iOS 15.0, *) {
+			displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
+		}
+		displayLink.isPaused = true
+		return displayLink
+	}()
 	
 	init(frame: CGRect, camera: Camera) {
 		print("init map with \(camera)")
@@ -131,7 +150,7 @@ public class MapScrollView: UIView {
 		}
 		
 		self.targetCamera = targetCamera
-		startAnimatingToTarget()
+		animationDisplayLink.isPaused = false
 	}
 	
 	private func currentCamera() -> Camera {
@@ -167,6 +186,8 @@ public class MapScrollView: UIView {
 		let centroidInWindow = event.centroid()
 		let centroid = event.centroid(in: mapContentsView)
 		let timeSincePreviousTap = event.timestamp - lastTouchTimestamp
+		
+		draggingDisplayLink.isPaused = false
 		
 		previousCentroid = centroid
 		previousCentroidInWindow = centroidInWindow
@@ -235,7 +256,7 @@ public class MapScrollView: UIView {
 			// but if we're zooming in with double-tap gesture, we might want to triple-tap,
 			// and this zoom animation should resume without stopping
 		} else {
-			stopAnimating()
+			animationDisplayLink.isPaused = true
 		}
 	}
 	
@@ -337,7 +358,7 @@ public class MapScrollView: UIView {
 		camera = currentCamera()
 		targetCamera = camera
 		didScroll(reason: .drag)
-		stopAnimating()
+		animationDisplayLink.isPaused = true
 		
 		self.previousCentroid = centroid
 		self.previousCentroidInWindow = centroidInWindow
@@ -410,7 +431,7 @@ public class MapScrollView: UIView {
 									  zoom: zoom,
 									  rotation: rotation)
 				if velocity != .zero {
-					startAnimatingToTarget()
+					animationDisplayLink.isPaused = false
 				}
 			}
 			
@@ -421,6 +442,7 @@ public class MapScrollView: UIView {
 			
 			lastTouchTimestamp = event.timestamp
 			lastTouchLocation = touches.first!.location(in: mapContentsView)
+			draggingDisplayLink.isPaused = true
 		} else {
 			previousCentroid = activeTouches.centroid(in: mapContentsView)
 		}
@@ -444,6 +466,7 @@ public class MapScrollView: UIView {
 		}
 		if allTouches.isEmpty {
 			previousCentroid = nil
+			draggingDisplayLink.isPaused = true
 		}
 		for touch in touches {
 			touchesBeganTimestamps.removeValue(forKey: touch.hash)
@@ -458,23 +481,6 @@ public class MapScrollView: UIView {
 		self
 	}
 	
-	private func startAnimatingToTarget() {
-		guard displayLink == nil else {
-			return
-		}
-		displayLink?.invalidate()
-		displayLink = CADisplayLink(target: self, selector: #selector(onDisplayLink))
-		displayLink?.add(to: .current, forMode: .common)
-	}
-	
-	func stopAnimating() {
-		guard displayLink != nil else {
-			return
-		}
-		displayLink?.invalidate()
-		displayLink = nil
-	}
-	
 	private var cameraIsOnTarget: Bool {
 		abs(targetCamera.center.latitude - camera.center.latitude) < 0.00001 &&
 		abs(targetCamera.center.longitude - camera.center.longitude) < 0.00001 &&
@@ -482,17 +488,24 @@ public class MapScrollView: UIView {
 		abs(targetCamera.rotation - camera.rotation) < 0.01
 	}
 	
-	@objc private func onDisplayLink() {
+	@objc private func onDraggingDisplayLink(_ displayLink: CADisplayLink) {
+		// do nothing
+	}
+	
+	@objc private func onDisplayLink(_ displayLink: CADisplayLink) {
+		let actualFrameRate = 1.0 / (displayLink.targetTimestamp - displayLink.timestamp)
+		let fraction = 120.0 / actualFrameRate		// think for 120Hz displays for the calculations
+		let speed = 0.07 * fraction
 		var nextCamera = camera
-		nextCamera.center += (targetCamera.center - camera.center) * 0.15
-		nextCamera.zoom += (targetCamera.zoom - zoom) * 0.15
-		nextCamera.rotation += (targetCamera.withRotationClose(to: rotation).rotation - rotation) * 0.15
+		nextCamera.center += (targetCamera.center - camera.center) * speed
+		nextCamera.zoom += (targetCamera.zoom - zoom) * speed
+		nextCamera.rotation += (targetCamera.withRotationClose(to: rotation).rotation - rotation) * speed
 		
 		updateOffset(to: nextCamera, reason: .animation)
 		
 		if camera.isNearlyEqual(to: targetCamera) {
 			camera = targetCamera
-			stopAnimating()
+			animationDisplayLink.isPaused = true
 		}
 	}
 	

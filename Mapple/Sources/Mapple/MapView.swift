@@ -83,19 +83,16 @@ public class MapView: MapScrollView {
 	override func didScroll(reason: ScrollReason) {
 		super.didScroll(reason: reason)
 		
-		let minZoom = UIScreen.main.bounds.height/2 / Double(tileSize)
+		let minZoom = (UIScreen.main.bounds.height/2 + 100.0) / Double(tileSize)
 		if zoom < minZoom {
 			zoom = minZoom
-			stopAnimating()
 		}
 		
 		if offset.y < 0 {
 			offset.y = 0
-			stopAnimating()
 		}
 		if offset.y > mapWidth - bounds.height {
 			offset.y = mapWidth - bounds.height
-			stopAnimating()
 		}
 		
 		updateLayers()
