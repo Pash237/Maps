@@ -39,6 +39,7 @@ public class MapScrollView: UIView {
 	private var previousCentroidInWindow: CGPoint?
 	private var previousCentroid: CGPoint?
 	private var previousDistance: CGFloat?
+	private var lastZoomGestureTwoFingerDistance: CGFloat = 300
 	
 	private var centroidToCalculateVelocity: CGPoint?
 	private var timestampToCalculateVelocity: TimeInterval?
@@ -58,6 +59,7 @@ public class MapScrollView: UIView {
 	private var twoFingerTapTimestamp: TimeInterval?
 	private var twoFingerTravelDistance: CGFloat = 0
 	private var doubleTapZoomTimestamp: TimeInterval?
+	private var lastTouchEndedEventTimestamp: TimeInterval = 0
 	
 	private var singleTapPossible = false
 	private var longPressWorkItem: DispatchWorkItem?
@@ -318,6 +320,7 @@ public class MapScrollView: UIView {
 					// the less we change distance between fingers, the more we likely want to rotate
 					rotationGestureThreshold *= (1.0 + min(max(0, abs(distance - touchesBeganDistance) - 20), 200.0) * 0.008)
 				}
+				lastZoomGestureTwoFingerDistance = distance
 			}
 			
 			if let previousAngle, let touchesBeganAngle, rotationGestureEnabled {
@@ -386,6 +389,8 @@ public class MapScrollView: UIView {
 			setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom - 1, rotation: rotation), animated: true)
 		}
 		
+		let accidentallyMovedOneFingerAfterZoomGesture = event.timestamp - lastTouchEndedEventTimestamp < 0.05 && lastZoomGestureTwoFingerDistance < 90
+		
 		if activeTouches.count < 2 {
 			previousDistance = nil
 			previousAngle = nil
@@ -426,7 +431,7 @@ public class MapScrollView: UIView {
 				velocity = .zero
 			}
 			
-			if dragGestureEnabled, doubleTapZoomTimestamp == nil {
+			if dragGestureEnabled, doubleTapZoomTimestamp == nil, !accidentallyMovedOneFingerAfterZoomGesture {
 				targetCamera = Camera(center: coordinates(at: contentBounds.center - velocity*0.1),
 									  zoom: zoom,
 									  rotation: rotation)
@@ -447,6 +452,7 @@ public class MapScrollView: UIView {
 			previousCentroid = activeTouches.centroid(in: mapContentsView)
 		}
 		
+		lastTouchEndedEventTimestamp = event.timestamp
 		for touch in touches {
 			touchesBeganTimestamps.removeValue(forKey: touch.hash)
 		}
