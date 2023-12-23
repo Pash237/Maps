@@ -88,16 +88,6 @@ public class MapScrollView: UIView {
 		return displayLink
 	}()
 	
-	private lazy var draggingDisplayLink: CADisplayLink = {
-		let displayLink = CADisplayLink(target: self, selector: #selector(onDraggingDisplayLink(_:)))
-		displayLink.add(to: .current, forMode: .common)
-		if #available(iOS 15.0, *) {
-			displayLink.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
-		}
-		displayLink.isPaused = true
-		return displayLink
-	}()
-	
 	init(frame: CGRect, camera: Camera) {
 		print("init map with \(camera)")
 		
@@ -189,7 +179,7 @@ public class MapScrollView: UIView {
 		let centroid = event.centroid(in: mapContentsView)
 		let timeSincePreviousTap = event.timestamp - lastTouchTimestamp
 		
-		draggingDisplayLink.isPaused = false
+		CADisplayLink.enableProMotion()
 		
 		previousCentroid = centroid
 		previousCentroidInWindow = centroidInWindow
@@ -274,6 +264,8 @@ public class MapScrollView: UIView {
 		var allTouches = event.activeTouches
 		let centroid = event.centroid(in: mapContentsView)
 		let centroidInWindow = event.centroid()
+		
+		CADisplayLink.enableProMotion()
 		
 		if previousTouchesCount != allTouches.count && (dragGestureEnabled || allTouches.count > 1) {
 			offset += centroid - previousCentroid
@@ -447,7 +439,6 @@ public class MapScrollView: UIView {
 			
 			lastTouchTimestamp = event.timestamp
 			lastTouchLocation = touches.first!.location(in: mapContentsView)
-			draggingDisplayLink.isPaused = true
 		} else {
 			previousCentroid = activeTouches.centroid(in: mapContentsView)
 		}
@@ -472,7 +463,6 @@ public class MapScrollView: UIView {
 		}
 		if allTouches.isEmpty {
 			previousCentroid = nil
-			draggingDisplayLink.isPaused = true
 		}
 		for touch in touches {
 			touchesBeganTimestamps.removeValue(forKey: touch.hash)
@@ -492,10 +482,6 @@ public class MapScrollView: UIView {
 		abs(targetCamera.center.longitude - camera.center.longitude) < 0.00001 &&
 		abs(targetCamera.zoom - camera.zoom) < 0.01 &&
 		abs(targetCamera.rotation - camera.rotation) < 0.01
-	}
-	
-	@objc private func onDraggingDisplayLink(_ displayLink: CADisplayLink) {
-		// do nothing
 	}
 	
 	@objc private func onDisplayLink(_ displayLink: CADisplayLink) {
