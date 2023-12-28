@@ -220,7 +220,7 @@ public class MapScrollView: UIView {
 			twoFingerTapTimestamp = nil
 		}
 		
-		if event.activeTouches.count == 2 {
+		if event.activeTouches.count >= 2 {
 			touchesBeganAngle = event.angle()
 			touchesBeganDistance = event.activeTouches[0].location(in: nil).distance(to: event.activeTouches[1].location(in: nil))
 			previousAngle = touchesBeganAngle
@@ -271,7 +271,6 @@ public class MapScrollView: UIView {
 		if previousTouchesCount != allTouches.count && (dragGestureEnabled || allTouches.count > 1) {
 			offset += centroid - previousCentroid
 			
-			velocity = .zero
 			centroidToCalculateVelocity = centroid
 			timestampToCalculateVelocity = event.timestamp
 		}
@@ -321,7 +320,7 @@ public class MapScrollView: UIView {
 				lastZoomGestureTwoFingerDistance = distance
 			}
 			
-			if let previousAngle, let touchesBeganAngle, rotationGestureEnabled {
+			if let previousAngle, let touchesBeganAngle, previousTouchesCount == allTouches.count, rotationGestureEnabled {
 				if fabs(touchesBeganAngle - angle).inRange > rotationGestureThreshold {
 					rotationGestureDetected = true
 				}
@@ -337,7 +336,7 @@ public class MapScrollView: UIView {
 		
 		if let timestamp = timestampToCalculateVelocity, let centroidToCalculateVelocity = centroidToCalculateVelocity {
 			let time = event.timestamp - timestamp
-			if time > 0.004 {
+			if time > 0.004, event.timestamp - lastTouchEndedEventTimestamp > 0.05 {
 				//TODO: use more points to compute velocity
 				velocity = (centroid - centroidToCalculateVelocity) / time
 			}
