@@ -68,6 +68,7 @@ public class MapScrollView: UIView {
 	private let initialRotationGestureThreshold: Radians = 0.25
 	private var rotationGestureThreshold: Radians = 0.25
 	private var rotationGestureDetected = false
+	private var lastRotationTimestamp: TimeInterval = 0
 	private var touchesBeganAngle: Radians?
 	private var touchesBeganDistance: Double?
 	private var previousAngle: Radians?
@@ -311,6 +312,11 @@ public class MapScrollView: UIView {
 					rotationGestureThreshold *= (1.0 + max(260.0 - distance, 0.0) * 0.005)
 					// the less we change distance between fingers, the more we likely want to rotate
 					rotationGestureThreshold *= (1.0 + min(max(0, abs(distance - touchesBeganDistance) - 20), 200.0) * 0.008)
+					
+					if event.timestamp - lastRotationTimestamp < 1.2 {
+						// easier rotation if we just rotated
+						rotationGestureThreshold *= 0.2
+					}
 				}
 				lastZoomGestureTwoFingerDistance = distance
 			}
@@ -321,6 +327,7 @@ public class MapScrollView: UIView {
 				}
 				if rotationGestureDetected {
 					rotation = (rotation + (angle - previousAngle)).inRange
+					lastRotationTimestamp = event.timestamp
 				}
 			}
 			
