@@ -270,8 +270,6 @@ public class MapScrollView: UIView {
 		
 		CADisplayLink.enableProMotion()
 		
-		scrollChange.translation += centroid - previousCentroid
-		
 		if previousTouchesCount != allTouches.count && (dragGestureEnabled || allTouches.count > 1) {
 			offset += centroid - previousCentroid
 			
@@ -367,6 +365,10 @@ public class MapScrollView: UIView {
 			}
 			
 			lastTouchTravelDistance += (previousCentroid - centroid).length
+		}
+		
+		if !doubleTapDragZooming {
+			scrollChange.translation += centroid - previousCentroid
 		}
 		
 		camera = currentCamera()
