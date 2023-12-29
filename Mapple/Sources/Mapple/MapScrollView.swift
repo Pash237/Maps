@@ -229,7 +229,6 @@ public class MapScrollView: UIView {
 		}
 		
 		camera = currentCamera()
-		targetCamera = camera
 		velocity = .zero
 		centroidToCalculateVelocity = centroid
 		timestampToCalculateVelocity = event.timestamp
@@ -251,6 +250,7 @@ public class MapScrollView: UIView {
 			// but if we're zooming in with double-tap gesture, we might want to triple-tap,
 			// and this zoom animation should resume without stopping
 		} else {
+			targetCamera = camera
 			animationDisplayLink.isPaused = true
 		}
 	}
