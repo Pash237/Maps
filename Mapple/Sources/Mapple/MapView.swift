@@ -17,6 +17,14 @@ public enum ScrollReason {
 	case layoutChange
 }
 
+public struct ScrollChange {
+	public var translation: Point
+	public var zoom: Double
+	public var rotation: Radians
+	
+	public static let zero = ScrollChange(translation: .zero, zoom: 0, rotation: 0)
+}
+
 public protocol MapViewLayer: UIView {
 	func update(offset: Point, zoom: Double, rotation: Radians)
 }
@@ -30,7 +38,7 @@ public class MapView: MapScrollView {
 		}
 	}
 	
-	public var onScroll = PassthroughSubject<ScrollReason, Never>()
+	public var onScroll = PassthroughSubject<(reason: ScrollReason, change: ScrollChange), Never>()
 	public var onTap = PassthroughSubject<Coordinates, Never>()
 	public var onTapOnLayer = PassthroughSubject<AnyHashable, Never>()
 	public var onLongPress = PassthroughSubject<Coordinates, Never>()
@@ -80,8 +88,8 @@ public class MapView: MapScrollView {
 		super.updateOffset(to: camera, reason: reason)
 	}
 	
-	override func didScroll(reason: ScrollReason) {
-		super.didScroll(reason: reason)
+	override func didScroll(reason: ScrollReason, change: ScrollChange) {
+		super.didScroll(reason: reason, change: change)
 		
 		let minZoom = (UIScreen.main.bounds.height/2 + 100.0) / Double(tileSize)
 		if zoom < minZoom {
@@ -96,7 +104,7 @@ public class MapView: MapScrollView {
 		}
 		
 		updateLayers()
-		onScroll.send(reason)
+		onScroll.send((reason: reason, change: change))
 	}
 	
 	private var mapWidth: Double {
@@ -155,7 +163,7 @@ public class MapView: MapScrollView {
 			}
 			
 			updateLayers()
-			onScroll.send(.layoutChange)
+			onScroll.send((reason: .layoutChange, change: ScrollChange(translation: .zero, zoom: 0, rotation: 0)))
 			
 			oldBounds = bounds
 		}

@@ -107,6 +107,7 @@ public class MapScrollView: UIView {
 	private var oldOffset: Point = .zero
 	private var oldZoom: Double = 0
 	private var oldRotation: Radians = -10000
+	private var scrollChange: ScrollChange = .zero
 	
 	func updateOffset(to camera: Camera, reason: ScrollReason) {
 		self.camera = camera
@@ -115,13 +116,13 @@ public class MapScrollView: UIView {
 		rotation = camera.rotation.inRange
 		
 		if oldZoom != zoom || oldRotation != rotation || oldOffset.distance(to: offset) > 0.2 {
-			didScroll(reason: reason)
+			didScroll(reason: reason, change: scrollChange)
 		} else {
 			// movement is too small — do not fire didScroll event
 		}
 	}
 	
-	func didScroll(reason: ScrollReason) {
+	func didScroll(reason: ScrollReason, change: ScrollChange) {
 		oldOffset = offset
 		oldZoom = zoom
 		oldRotation = rotation
@@ -269,6 +270,8 @@ public class MapScrollView: UIView {
 		
 		CADisplayLink.enableProMotion()
 		
+		scrollChange.translation += centroid - previousCentroid
+		
 		if previousTouchesCount != allTouches.count && (dragGestureEnabled || allTouches.count > 1) {
 			offset += centroid - previousCentroid
 			
@@ -324,6 +327,8 @@ public class MapScrollView: UIView {
 					}
 				}
 				lastZoomGestureTwoFingerDistance = distance
+				
+				scrollChange.zoom += abs(zoomChange)
 			}
 			
 			if let previousAngle, let touchesBeganAngle, previousTouchesCount == allTouches.count, rotationGestureEnabled {
@@ -333,6 +338,8 @@ public class MapScrollView: UIView {
 				if rotationGestureDetected {
 					rotation = (rotation + (angle - previousAngle)).inRange
 					lastRotationTimestamp = event.timestamp
+					
+					scrollChange.rotation += abs(angle - previousAngle)
 				}
 			}
 			
@@ -364,7 +371,7 @@ public class MapScrollView: UIView {
 		
 		camera = currentCamera()
 		targetCamera = camera
-		didScroll(reason: .drag)
+		didScroll(reason: .drag, change: scrollChange)
 		animationDisplayLink.isPaused = true
 		
 		self.previousCentroid = centroid
@@ -453,6 +460,10 @@ public class MapScrollView: UIView {
 			lastTouchLocation = touches.first!.location(in: mapContentsView)
 		} else {
 			previousCentroid = activeTouches.centroid(in: mapContentsView)
+		}
+		
+		if activeTouches.isEmpty {
+			scrollChange = .zero
 		}
 		
 		lastTouchEndedEventTimestamp = event.timestamp
