@@ -142,10 +142,14 @@ public extension Array where Element == Coordinates {
 			(map {$0.longitude}.reduce(0, +))/Double(count)
 		)
 	}
+	
+	func bounds() -> CoordinateBounds {
+		CoordinateBounds(coordinates: self)
+	}
 }
 
 
-extension FloatingPoint {
+public extension FloatingPoint {
 	func isNearlyEqual(to value: Self, precision: Self = .ulpOfOne) -> Bool {
 		abs(self - value) <= precision
 	}
