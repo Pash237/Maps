@@ -162,17 +162,16 @@ extension SpatialMapLayersView {
 			
 			let coordinates = coordinates()
 			
-			let pointToSkip = max(0, 17 - Int(round(zoom)))
+			var pointToSkip = max(0.0, 17 - floor(zoom)) * min(1.0, Double(coordinates.count/1000))
 			let minimumPointDistance = zoom > 18 ? 1.0 : (zoom > 14 ? 3.0 : 4.0)
 			
 			var lastPoint: Point = .zero
 			var i = 0
 			while i < coordinates.count {
-				let coordinates = coordinates[i]
-				let point = projection.point(at: zoom, from: coordinates)
+				let point = projection.point(at: zoom, from: coordinates[i])
 				guard insetBounds.contains(point-offset) else {
 					lastPoint = .zero
-					i += 20 + pointToSkip
+					i += 20 + Int(pointToSkip)
 					continue
 				}
 				if lastPoint == .zero {
@@ -181,14 +180,17 @@ extension SpatialMapLayersView {
 				} else if (lastPoint - point).maxDimension > minimumPointDistance {
 					linePath.addLine(to: point)
 					lastPoint = point
+					pointToSkip = max(0, pointToSkip - 0.4)*0.77
+				} else {
+					pointToSkip = (pointToSkip + 0.4)*1.3
 				}
 				
-				i += 1 + pointToSkip
+				i += 1 + Int(pointToSkip)
 			}
 			// always add last point as it may by thrown away by stride
 			if let lastCoordinates = coordinates.last {
 				let endPoint = projection.point(at: zoom, from: lastCoordinates)
-				if (lastPoint - endPoint).maxDimension > 1 && insetBounds.contains(endPoint-offset) {
+				if /*(lastPoint - endPoint).maxDimension > 1 && */insetBounds.contains(endPoint-offset) {
 					linePath.addLine(to: endPoint)
 				}
 			}
