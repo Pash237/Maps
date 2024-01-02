@@ -55,7 +55,7 @@ public class MapScrollView: UIView {
 	private var doubleTapDragZooming = false
 	private var doubleTapDragZoomCenter: CGPoint = .zero
 	private let doubleTapDragZoomDelay: TimeInterval = 0.26
-	private let doubleTapDragZoomSpeed = 0.015
+	private let doubleTapDragZoomSpeed = 0.012
 	private let tapHoldDuration = 0.25
 	private var twoFingerTapTimestamp: TimeInterval?
 	private var twoFingerTravelDistance: CGFloat = 0
