@@ -123,7 +123,11 @@ public class MapView: MapScrollView {
 		
 		mapLayers.forEach {
 			$0.update(offset: offset, zoom: zoom, rotation: rotation)
-			$0.transform = CGAffineTransform(rotationAngle: rotation)
+			let center = contentBounds.center - center
+			var transform = CGAffineTransformMakeTranslation(center.x, center.y);
+			transform = CGAffineTransformRotate(transform, rotation);
+			transform = CGAffineTransformTranslate(transform, -center.x, -center.y);
+			$0.transform = transform
 		}
 		
 		CATransaction.commit()
