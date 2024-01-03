@@ -444,10 +444,25 @@ public class MapScrollView: UIView {
 				velocity = .zero
 			}
 			
-			if dragGestureEnabled, doubleTapZoomTimestamp == nil, !accidentallyMovedOneFingerAfterZoomGesture {
+			if dragGestureEnabled, doubleTapZoomTimestamp == nil, !doubleTapDragZooming, !accidentallyMovedOneFingerAfterZoomGesture {
+				// decelerate drag
 				targetCamera = Camera(center: coordinates(at: contentBounds.center - velocity*0.1),
 									  zoom: zoom,
 									  rotation: rotation)
+				if velocity != .zero {
+					animationDisplayLink.isPaused = false
+				}
+			} else if doubleTapDragZooming {
+				// decelerate tap-tap-drag zoom
+				let targetZoom = zoom - velocity.y * 0.0005
+				let zoomCenterOnMap = offset + (zoomAndRotationAnchor ?? doubleTapDragZoomCenter)
+				let zoomChange = 1.0 - pow(2.0, targetZoom - zoom)
+				let targetOffset = offset - zoomCenterOnMap * zoomChange
+				
+				targetCamera = Camera(center: projection.coordinates(from: contentBounds.center + targetOffset, at: targetZoom),
+									  zoom: targetZoom,
+									  rotation: rotation)
+				
 				if velocity != .zero {
 					animationDisplayLink.isPaused = false
 				}
