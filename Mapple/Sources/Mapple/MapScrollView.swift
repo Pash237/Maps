@@ -447,21 +447,21 @@ public class MapScrollView: UIView {
 			if dragGestureEnabled, doubleTapZoomTimestamp == nil, !doubleTapDragZooming, !accidentallyMovedOneFingerAfterZoomGesture {
 				// decelerate drag
 				targetCamera = Camera(center: coordinates(at: contentBounds.center - velocity*0.1),
-									  zoom: zoom,
-									  rotation: rotation)
+									  zoom: targetCamera.zoom,
+									  rotation: targetCamera.rotation)
 				if velocity != .zero {
 					animationDisplayLink.isPaused = false
 				}
-			} else if doubleTapDragZooming {
+			} else if doubleTapDragZooming, lastTouchTravelDistance > 20 {
 				// decelerate tap-tap-drag zoom
-				let targetZoom = zoom - velocity.y * 0.0005
+				let targetZoom = targetCamera.zoom - velocity.y * 0.0005
 				let zoomCenterOnMap = offset + (zoomAndRotationAnchor ?? doubleTapDragZoomCenter)
 				let zoomChange = 1.0 - pow(2.0, targetZoom - zoom)
 				let targetOffset = offset - zoomCenterOnMap * zoomChange
 				
 				targetCamera = Camera(center: projection.coordinates(from: contentBounds.center + targetOffset, at: targetZoom),
 									  zoom: targetZoom,
-									  rotation: rotation)
+									  rotation: targetCamera.rotation)
 				
 				if velocity != .zero {
 					animationDisplayLink.isPaused = false
@@ -470,7 +470,6 @@ public class MapScrollView: UIView {
 			
 			previousTouchEndCentroid = previousCentroid
 			previousCentroid = nil
-			twoFingerTravelDistance = 0
 			doubleTapDragZooming = false
 			
 			lastTouchTimestamp = event.timestamp
@@ -480,6 +479,7 @@ public class MapScrollView: UIView {
 		}
 		
 		if activeTouches.isEmpty {
+			twoFingerTravelDistance = 0
 			scrollChange = .zero
 		}
 		
