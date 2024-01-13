@@ -138,7 +138,8 @@ public class PointMapLayersView: UIView, MapViewLayer {
 			let point = projection.point(at: zoom, from: coordinates) - offset
 			let distance = layer.position.distance(to: point)
 			if distance < threshold {
-				return (key, distance)
+				let pointLayersPriority = 6.0
+				return (key, distance - pointLayersPriority)
 			} else {
 				return nil
 			}
