@@ -183,7 +183,7 @@ extension SpatialMapLayersView {
 					lastPoint = point
 					pointToSkip = max(0, pointToSkip - 0.4)*0.77
 				} else {
-					pointToSkip = (pointToSkip + 0.4)*1.3
+					pointToSkip = min(20, (pointToSkip + 0.4)*1.3)
 				}
 				
 				i += 1 + Int(pointToSkip)

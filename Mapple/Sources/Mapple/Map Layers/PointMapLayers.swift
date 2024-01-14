@@ -34,6 +34,8 @@ open class PointMapLayer: CALayer {
 		}
 		super.init(layer: layer)
 	}
+	
+	open var scale = 1.0
 }
 
 public class PointMapLayersView: UIView, MapViewLayer {
@@ -64,6 +66,7 @@ public class PointMapLayersView: UIView, MapViewLayer {
 		let drawingLayer = configureLayer(nil)
 		drawingLayersConfigs[id] = configureLayer
 		drawingLayers[id] = drawingLayer
+		drawingLayer.scale = min(max(1.0 - (11.0 - zoom) / (11.0 - 7.0), 0.0), 1.0)
 		layer.addSublayer(drawingLayer)
 		
 		redrawLayer(id: id)
@@ -98,12 +101,19 @@ public class PointMapLayersView: UIView, MapViewLayer {
 		Array(drawingLayers.keys)
 	}
 	
+	public func allLayers() -> [PointMapLayer] {
+		Array(drawingLayers.values)
+	}
+	
 	public func update(offset: Point, zoom: Double, rotation: Radians) {
 		self.offset = offset
 		self.zoom = zoom
 		self.rotation = rotation
 		
 		if drawnLayerZoom != zoom || drawnLayerOffset.distance(to: offset) > bounds.width {
+			for layer in drawingLayers.values {
+				layer.scale = min(max(1.0 - (11.0 - zoom) / (11.0 - 7.0), 0.0), 1.0)
+			}
 			redrawLayers()
 		}
 		positionDrawingLayers()
