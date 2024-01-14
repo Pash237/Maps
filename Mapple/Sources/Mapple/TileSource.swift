@@ -112,11 +112,11 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate {
 		lhs.hash == rhs.hash
 	}
 	
-	public var tileCacheDirectory: URL {
+	public lazy var tileCacheDirectory: URL = {
 		FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first!
 			.appendingPathComponent("TileCache", isDirectory: true)
 			.appendingPathComponent(title, isDirectory: true)
-	}
+	}()
 	
 	private func defaultImagePipeline() -> ImagePipeline {
 		let dataLoader: DataLoader = {
@@ -127,6 +127,8 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate {
 		}()
 
 		ImagePipeline.disableSweep(for: tileCacheDirectory)
+		
+		tileCacheDirectory.excludeFromBackup()
 		
 		let diskCache = try! DataCache(path: tileCacheDirectory, filenameGenerator: { $0 })
 		diskCache.sizeLimit = 10 * 1024 * 1024 * 1024  // 10 GB
@@ -194,5 +196,17 @@ public extension ImagePipeline {
 		let metadata = Metadata(lastSweepDate: .distantFuture)
 		let metadataFileURL = path.appendingPathComponent(".data-cache-info", isDirectory: false)
 		try? JSONEncoder().encode(metadata).write(to: metadataFileURL)
+	}
+}
+
+private extension URL {
+	mutating func excludeFromBackup() {
+		var values = URLResourceValues()
+		values.isExcludedFromBackup = true
+		do {
+			try self.setResourceValues(values)
+		} catch {
+			assertionFailure("Unable to exclude \(self) from backup")
+		}
 	}
 }
