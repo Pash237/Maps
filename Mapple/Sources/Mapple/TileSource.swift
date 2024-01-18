@@ -9,7 +9,7 @@ import Foundation
 import UIKit
 import Nuke
 
-public final class TileSource: Equatable, Hashable, ImagePipelineDelegate {
+public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unchecked Sendable {
 	public let title: String
 	public let url: String
 	public let tileSize: Int	//size in points on screen
