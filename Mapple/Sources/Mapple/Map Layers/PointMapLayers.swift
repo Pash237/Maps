@@ -36,6 +36,7 @@ open class PointMapLayer: CALayer {
 	}
 	
 	open var scale = 1.0
+	var id: Int = 0
 }
 
 public class PointMapLayersView: UIView, MapViewLayer {
@@ -44,7 +45,7 @@ public class PointMapLayersView: UIView, MapViewLayer {
 	private(set) var rotation: Radians = 0.0
 	var projection = SphericalMercator()
 	
-	private var drawingLayersConfigs: Dictionary<AnyHashable, ((PointMapLayer?) -> (PointMapLayer))> = [:]
+	private var drawingLayersConfigs: Dictionary<Int, ((PointMapLayer?) -> (PointMapLayer))> = [:]
 	private var drawingLayers: Dictionary<AnyHashable, PointMapLayer> = [:]
 	private var drawnLayerOffset: CGPoint = .zero
 	private var drawnLayerZoom: Double = 11
@@ -64,7 +65,8 @@ public class PointMapLayersView: UIView, MapViewLayer {
 		drawingLayers[id]?.removeFromSuperlayer()
 		
 		let drawingLayer = configureLayer(nil)
-		drawingLayersConfigs[id] = configureLayer
+		drawingLayer.id = id.hashValue
+		drawingLayersConfigs[drawingLayer.id] = configureLayer
 		drawingLayers[id] = drawingLayer
 		drawingLayer.scale = min(max(1.0 - (11.0 - zoom) / (11.0 - 7.0), 0.0), 1.0)
 		layer.addSublayer(drawingLayer)
@@ -78,7 +80,7 @@ public class PointMapLayersView: UIView, MapViewLayer {
 	public func removeMapLayer(_ layer: PointMapLayer) {
 		for (key, existent) in drawingLayers {
 			if layer === existent {
-				drawingLayersConfigs[key] = nil
+				drawingLayersConfigs[layer.id] = nil
 				drawingLayers[key] = nil
 				break
 			}
@@ -126,15 +128,15 @@ public class PointMapLayersView: UIView, MapViewLayer {
 		}
 		
 		if let layer = drawingLayers[id] {
-			let _ = drawingLayersConfigs[id]?(layer)
+			let _ = drawingLayersConfigs[id.hashValue]?(layer)
 		}
 				
 		CATransaction.commit()
 	}
 	
 	public func redrawLayers(allowAnimation: Bool = false) {
-		for (key, layer) in drawingLayers {
-			let _ = drawingLayersConfigs[key]?(layer)
+		for layer in drawingLayers.values {
+			let _ = drawingLayersConfigs[layer.id]?(layer)
 		}
 		
 		drawnLayerZoom = zoom
