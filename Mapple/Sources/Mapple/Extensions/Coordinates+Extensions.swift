@@ -25,6 +25,10 @@ public func -=(lhs: inout CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) {
 	lhs = lhs - rhs
 }
 
+public func *(lhs: CLLocationCoordinate2D, rhs: Double) -> CLLocationCoordinate2D {
+	CLLocationCoordinate2D(latitude: lhs.latitude * rhs, longitude: lhs.longitude * rhs)
+}
+
 extension Coordinates: Hashable {
 	public init(_ latitude: CLLocationDegrees, _ longitude: CLLocationDegrees) {
 		self.init(latitude: latitude, longitude: longitude)
@@ -48,8 +52,8 @@ extension Coordinates: Hashable {
 }
 
 public struct CoordinateBounds: Codable, Hashable, Equatable, CustomStringConvertible {
-	var northeast: Coordinates
-	var southwest: Coordinates
+	var northeast: Coordinates	// (max, max) top-right
+	var southwest: Coordinates	// (min, min) bottom-left
 	
 	public init(northeast: Coordinates, southwest: Coordinates) {
 		self.northeast = northeast
@@ -125,6 +129,18 @@ public struct CoordinateBounds: Codable, Hashable, Equatable, CustomStringConver
 		Coordinates(
 			(northeast.latitude + southwest.latitude)/2,
 			(northeast.longitude + southwest.longitude)/2
+		)
+	}
+	
+	/**
+	 * Creates smaller approximate bounds if input meters are negative and larger bounds if meters are positive
+	 */
+	public func enlarge(by meters: CLLocationDistance) -> CoordinateBounds {
+		let inset = Coordinates(meters / 111320,
+								meters / (40075000 * cos(northeast.latitude) / 360))
+		return CoordinateBounds.init(
+			northeast: Coordinates(northeast.latitude + inset.latitude, northeast.longitude + inset.latitude),
+			southwest: Coordinates(southwest.latitude - inset.latitude, southwest.longitude - inset.latitude)
 		)
 	}
 }
