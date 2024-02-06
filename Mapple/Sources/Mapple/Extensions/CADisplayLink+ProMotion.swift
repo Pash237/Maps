@@ -1,5 +1,5 @@
 //
-//  File.swift
+//  CADisplayLink+ProMotion.swift
 //  
 //
 //  Created by Pavel Alexeev on 22.12.2023.
