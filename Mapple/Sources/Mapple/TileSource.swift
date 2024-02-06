@@ -204,6 +204,9 @@ private extension URL {
 		var values = URLResourceValues()
 		values.isExcludedFromBackup = true
 		do {
+			if !FileManager.default.fileExists(atPath: path) {
+				try FileManager.default.createDirectory(at: self, withIntermediateDirectories: true)
+			}
 			try self.setResourceValues(values)
 		} catch {
 			assertionFailure("Unable to exclude \(self) from backup")
