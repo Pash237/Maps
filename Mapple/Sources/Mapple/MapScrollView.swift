@@ -153,7 +153,7 @@ public class MapScrollView: UIView {
 		Camera(center: coordinates(at: contentBounds.center), zoom: zoom, rotation: rotation)
 	}
 	
-	public func coordinates(at screenPoint: Point) -> Coordinates {
+	public func coordinates(at screenPoint: CGPoint) -> Coordinates {
 		projection.coordinates(from: offset + screenPoint, at: zoom)
 	}
 	

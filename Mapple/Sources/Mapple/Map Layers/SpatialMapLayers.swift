@@ -7,11 +7,11 @@
 
 import UIKit
 
-public class SpatialMapLayersView: UIView, MapViewLayer {
-	private var offset: Point = .zero
-	private var zoom: Double = 11
+public class SpatialMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
+	public private(set) var offset: Point = .zero
+	public private(set) var zoom: Double = 11
 	private var rotation: Radians = 0.0
-	var projection = SphericalMercator()
+	public private(set) var projection = SphericalMercator()
 	
 	private var drawingLayersConfigs: Dictionary<AnyHashable, ((CALayer?) -> (CALayer))> = [:]
 	private var drawingLayers: Dictionary<AnyHashable, CALayer> = [:]
@@ -102,7 +102,7 @@ public class SpatialMapLayersView: UIView, MapViewLayer {
 		drawnLayerOffset = offset
 	}
 	
-	func layerIds(at coordinates: Coordinates, threshold: CGFloat = 30.0) -> [(key: AnyHashable, distance: CGFloat)] {
+	public func layerIds(at coordinates: Coordinates, threshold: CGFloat = 30.0) -> [(key: AnyHashable, distance: CGFloat)] {
 		drawingLayers.compactMap { key, layer in
 			let random = CGFloat(key.hashValue) / CGFloat(Int.max)	// helps to pick identical points
 			let point = projection.point(at: zoom, from: coordinates) + CGPoint(x: random, y: random)
@@ -115,6 +115,7 @@ public class SpatialMapLayersView: UIView, MapViewLayer {
 	}
 	
 	private func positionDrawingLayer(_ layer: CALayer) {
+		//TODO: do not position layers outside of bounds
 		layer.position = .zero - offset //projection.convert(point: drawnLayerOffset, from: Double(drawnLayerZoom), to: zoom) - offset
 		let scale = pow(2.0, zoom - Double(drawnLayerZoom))
 		layer.transform = CATransform3DMakeScale(scale, scale, 1)

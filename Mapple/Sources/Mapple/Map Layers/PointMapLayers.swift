@@ -39,7 +39,7 @@ open class PointMapLayer: CALayer {
 	var id: Int = 0
 }
 
-public class PointMapLayersView: UIView, MapViewLayer {
+public class PointMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 	private(set) var offset: Point = .zero
 	private(set) var zoom: Double = 11
 	private(set) var rotation: Radians = 0.0
@@ -143,7 +143,7 @@ public class PointMapLayersView: UIView, MapViewLayer {
 		drawnLayerOffset = offset
 	}
 	
-	func layerIds(at coordinates: Coordinates, threshold: CGFloat = 30.0) -> [(key: AnyHashable, distance: CGFloat)] {
+	public func layerIds(at coordinates: Coordinates, threshold: CGFloat = 30.0) -> [(key: AnyHashable, distance: CGFloat)] {
 		drawingLayers.compactMap { key, layer in
 			guard !layer.isHidden else { return nil }
 			

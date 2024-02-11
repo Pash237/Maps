@@ -29,6 +29,10 @@ public protocol MapViewLayer: UIView {
 	func update(offset: Point, zoom: Double, rotation: Radians)
 }
 
+public protocol TouchableMapViewLayer {
+	func layerIds(at coordinates: Coordinates, threshold: CGFloat) -> [(key: AnyHashable, distance: CGFloat)]
+}
+
 public class MapView: MapScrollView {
 	private var tileLayersCache: [TileSource: [MapTile: MapTileLayer]] = [:]
 	
@@ -139,6 +143,17 @@ public class MapView: MapScrollView {
 		updateLayers()
 	}
 	
+	public func addMapViewLayer(_ layer: MapViewLayer, below: MapViewLayer) {
+		guard let index = mapLayers.firstIndex(where: {$0 === below}) else {
+			assertionFailure("Layer not found")
+			addMapViewLayer(layer)
+			return
+		}
+		mapLayers.insert(layer, at: index)
+		insertSubview(layer, at: index)
+		updateLayers()
+	}
+	
 	public func removeMapViewLayer(_ layer: MapViewLayer) {
 		if let index = mapLayers.firstIndex(where: { $0 === layer }) {
 			mapLayers.remove(at: index)
@@ -178,14 +193,12 @@ public class MapView: MapScrollView {
 	}
 	
 	public func layerId(at coordinates: Coordinates) -> AnyHashable? {
-		let touchedLayerIds = spatialLayers.layerIds(at: coordinates).map {
-			(key: $0.key, distance: $0.distance)
-		}
-		+
-		pointLayers.layerIds(at: coordinates).map {
-			(key: $0.key, distance: $0.distance - 6.0)	// higher priority for POIs
-		}
-		
+		let touchedLayerIds = mapLayers.compactMap({ $0 as? TouchableMapViewLayer & MapViewLayer }).reduce([], { result, layer in
+			result + layer.layerIds(at: coordinates, threshold: 30).map {
+				(key: $0.key, distance: $0.distance - (layer === pointLayers ? 6.0 : 0))
+			}
+		})
+
 		let closest = touchedLayerIds.min(by: {
 			$0.distance < $1.distance
 		})
