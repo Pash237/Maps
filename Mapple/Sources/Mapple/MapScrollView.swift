@@ -14,16 +14,17 @@ public class MapScrollView: UIView {
 	
 	public var contentInset: UIEdgeInsets = .zero {
 		didSet {
-			if oldValue != .zero && contentInset != oldValue {
-				camera = currentCamera()
-				targetCamera = camera
-				
-				// keep map center in the center when content insets changes
-				// TODO: keep just-touched map region on screen
-//				let oldBounds = bounds.inset(by: oldValue)
-//				let cameraAtOldCenter = Camera(center: coordinates(at: oldBounds.center), zoom: zoom)
-//				setCamera(cameraAtOldCenter, animated: true)
-			}
+			guard contentInset != oldValue else { return }
+			
+			camera = currentCamera()
+			targetCamera = camera
+						
+			// keep map center in the center when content insets changes
+			// TODO: keep just-touched map region on screen
+//			guard oldValue != .zero else { return }
+//			let oldBounds = bounds.inset(by: oldValue)
+//			let cameraAtOldCenter = Camera(center: coordinates(at: oldBounds.center), zoom: zoom)
+//			setCamera(cameraAtOldCenter, animated: true)
 		}
 	}
 	
@@ -46,6 +47,7 @@ public class MapScrollView: UIView {
 	private var timestampToCalculateVelocity: TimeInterval?
 	private var velocity: CGPoint = .zero
 	public private(set) var targetCamera: Camera
+	private var speedToTargetCamera: CGFloat = 0	// 0...1
 	
 	private var lastTouchTimestamp: TimeInterval = 0
 	private var lastTouchLocation: CGPoint = .zero
@@ -146,6 +148,9 @@ public class MapScrollView: UIView {
 		}
 		
 		self.targetCamera = targetCamera
+		if speedToTargetCamera != 1 {
+			speedToTargetCamera = min(speedToTargetCamera, 0.3)	// hacky solution, but good enough
+		}
 		animationDisplayLink.isPaused = false
 	}
 	
@@ -451,6 +456,7 @@ public class MapScrollView: UIView {
 									  zoom: targetCamera.zoom,
 									  rotation: targetCamera.rotation)
 				if velocity != .zero {
+					speedToTargetCamera = 1
 					animationDisplayLink.isPaused = false
 				}
 			} else if doubleTapDragZooming, lastTouchTravelDistance > 20 {
@@ -463,8 +469,8 @@ public class MapScrollView: UIView {
 				targetCamera = Camera(center: projection.coordinates(from: contentBounds.center + targetOffset, at: targetZoom),
 									  zoom: targetZoom,
 									  rotation: targetCamera.rotation)
-				
 				if velocity != .zero {
+					speedToTargetCamera = 1
 					animationDisplayLink.isPaused = false
 				}
 			}
@@ -499,6 +505,8 @@ public class MapScrollView: UIView {
 			return
 		}
 		
+		// TODO: stop animations
+		
 		if allTouches.count < 2 {
 			previousDistance = nil
 		}
@@ -527,8 +535,14 @@ public class MapScrollView: UIView {
 	
 	@objc private func onDisplayLink(_ displayLink: CADisplayLink) {
 		let actualFrameRate = 1.0 / (displayLink.targetTimestamp - displayLink.timestamp)
-		let fraction = 120.0 / actualFrameRate		// think for 120Hz displays for the calculations
-		let speed = 0.07 * fraction
+		let frameRateAdjustment = 120.0 / actualFrameRate		// think for 120Hz displays for the calculations
+		
+		let mapScrollSpeed = 0.07
+		let acceleration = 1.4 * (1 - speedToTargetCamera) + 1.0 * (speedToTargetCamera)
+		speedToTargetCamera = (speedToTargetCamera * acceleration).clamped(to: 0.03...1)
+		
+		let speed = speedToTargetCamera * mapScrollSpeed * frameRateAdjustment
+
 		var nextCamera = camera
 		nextCamera.center += (targetCamera.center - camera.center) * speed
 		nextCamera.zoom += (targetCamera.zoom - zoom) * speed
@@ -538,6 +552,7 @@ public class MapScrollView: UIView {
 		
 		if camera.isNearlyEqual(to: targetCamera) {
 			camera = targetCamera
+			speedToTargetCamera = 0
 			animationDisplayLink.isPaused = true
 		}
 	}
