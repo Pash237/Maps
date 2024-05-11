@@ -15,6 +15,7 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 	public let tileSize: Int	//size in points on screen
 	public let minZoom: Int
 	public let maxZoom: Int
+	public let headers: [String:String]
 	
 	private var imagePipeline: ImagePipeline!
 	public let hash: Int
@@ -22,9 +23,10 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 	
 	private static var cachedImageLookup: [TileSource:[MapTile:Bool]] = [:]
 
-	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, imagePipeline: ImagePipeline? = nil) {
+	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, headers: [String:String] = [:], imagePipeline: ImagePipeline? = nil) {
 		self.title = title
 		self.url = url
+		self.headers = headers
 		self.tileSize = tileSize
 		self.minZoom = minZoom
 		self.maxZoom = maxZoom
@@ -64,7 +66,11 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 	@discardableResult
 	public func loadImage(for tile: MapTile, completion: @escaping ((_ result: Result<ImageResponse, ImagePipeline.Error>) -> Void)) -> ImageTask {
 		let url = url(for: tile)
-		var request = ImageRequest(url: url)
+		var urlRequest = URLRequest(url: url)
+		for (key, value) in headers {
+			urlRequest.setValue(value, forHTTPHeaderField: key)
+		}
+		var request = ImageRequest(urlRequest: urlRequest)
 		request.userInfo = [
 			.tileKey: tile,
 			.tileSourceIdKey: hash
