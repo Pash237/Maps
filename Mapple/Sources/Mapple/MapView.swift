@@ -99,6 +99,9 @@ public class MapView: MapScrollView {
 		if zoom < minZoom {
 			zoom = minZoom
 		}
+		if zoom > 25 {
+			zoom = 25
+		}
 		
 		if offset.y < 0 {
 			offset.y = 0
