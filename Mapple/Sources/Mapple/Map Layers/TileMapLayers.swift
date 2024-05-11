@@ -62,32 +62,27 @@ class TileMapView: UIView, MapViewLayer {
 		prioritizeLoading()
 	}
 	
-	
-	private var tileSize: Int { tileSources[0].tileSize }
-	
 	private func addRequiredTileLayers() {
-		let requiredZoom: Int = max(1, Int(zoom.rounded()))
-		let requiredScale = pow(2.0, Double(requiredZoom) - zoom)
-		let size = Double(tileSize)
-		let margin = loadMargin
-		let topLeft = projection.convert(point: offset - margin, from: zoom, to: Double(requiredZoom))
-		
-		let min = topLeft / size
-		let max = (topLeft + Point(x: bounds.width, y: bounds.height)*requiredScale + margin*2*requiredScale) / size
-		
 		for tileSource in tileSources {
+			let requiredZoom: Int = Int(zoom.rounded()).clamped(to: tileSource.zoomRange)
+			let requiredScale = pow(2.0, Double(requiredZoom) - zoom)
+			let size = Double(tileSource.tileSize)
+			let margin = loadMargin
+			let topLeft = projection.convert(point: offset - margin, from: zoom, to: Double(requiredZoom))
+			
+			let min = topLeft / size
+			let max = (topLeft + Point(x: bounds.width, y: bounds.height)*requiredScale + margin*2*requiredScale) / size
+			
 			if tileLayersCache[tileSource] == nil {
 				tileLayersCache[tileSource] = [:]
 			}
-		}
 		
-		for tileSource in tileSources {
 			for x in Int(min.x)...Int(max.x) {
 				for y in Int(min.y)...Int(max.y) {
 					guard requiredZoom >= 0, x >= 0, y >= 0 else {
 						continue
 					}
-					let tile = MapTile(x: x, y: y, zoom: requiredZoom, size: tileSize)
+					let tile = MapTile(x: x, y: y, zoom: requiredZoom, size: tileSource.tileSize)
 					
 					if tileLayersCache[tileSource]![tile] == nil {
 //						let frame = CGRect(
@@ -107,7 +102,7 @@ class TileMapView: UIView, MapViewLayer {
 							let largerTile = MapTile(x: tile.x/multiplier,
 													 y: tile.y/multiplier,
 													 zoom: smallerZoom,
-													 size: tileSize)
+													 size: tileSource.tileSize)
 							if tileLayersCache[tileSource]![largerTile] != nil && tileSource.hasCachedImage(for: largerTile) {
 								break
 							}
