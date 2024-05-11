@@ -39,6 +39,22 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 			preheatCacheLookup()
 		}
 	}
+	
+	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, headers: [String:String] = [:], ttl: TimeInterval) {
+		self.title = title
+		self.url = url
+		self.headers = headers
+		self.tileSize = tileSize
+		self.minZoom = minZoom
+		self.maxZoom = maxZoom
+		self.hash = abs(url.hash)
+		self.stringHash = String(hash % 1679616, radix: 36)
+		self.imagePipeline = noCacheImagePipeline(ttl: ttl)
+		
+		if Self.cachedImageLookup[self] == nil {
+			Self.cachedImageLookup[self] = [:]
+		}
+	}
 
 	public func url(for tile: MapTile) -> URL {
 		URL(string: url
@@ -149,6 +165,26 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 			$0.dataLoadingQueue.maxConcurrentOperationCount = 6
 		}
 	}
+	
+	func noCacheImagePipeline(ttl: TimeInterval) -> ImagePipeline {
+		let dataLoader: DataLoader = {
+			let config = URLSessionConfiguration.default
+			config.urlCache = nil
+			config.waitsForConnectivity = true
+			return DataLoader(configuration: config)
+		}()
+		
+		let imageCache = ImageCache()
+		imageCache.ttl = ttl
+		
+		return ImagePipeline(delegate: self) {
+			$0.dataLoader = dataLoader
+			$0.dataCache = nil
+			$0.dataLoadingQueue.maxConcurrentOperationCount = 6
+			$0.imageCache = imageCache
+		}
+	}
+	
 	
 	private func preheatCacheLookup() {
 		DispatchQueue.global(qos: .background).async { [self] in
