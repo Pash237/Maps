@@ -21,7 +21,7 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 	public let hash: Int
 	public let stringHash: String
 	
-	private static var cachedImageLookup: [TileSource:[MapTile:Bool]] = [:]
+	private var cachedImageLookup: [MapTile:Bool] = [:]
 
 	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, headers: [String:String] = [:], imagePipeline: ImagePipeline? = nil) {
 		self.title = title
@@ -34,10 +34,7 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 		self.stringHash = String(hash % 1679616, radix: 36)
 		self.imagePipeline = imagePipeline ?? defaultImagePipeline()
 		
-		if Self.cachedImageLookup[self] == nil {
-			Self.cachedImageLookup[self] = [:]
-			preheatCacheLookup()
-		}
+		preheatCacheLookup()
 	}
 	
 	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, headers: [String:String] = [:], ttl: TimeInterval) {
@@ -50,10 +47,6 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 		self.hash = abs(url.hash)
 		self.stringHash = String(hash % 1679616, radix: 36)
 		self.imagePipeline = noCacheImagePipeline(ttl: ttl)
-		
-		if Self.cachedImageLookup[self] == nil {
-			Self.cachedImageLookup[self] = [:]
-		}
 	}
 
 	public func url(for tile: MapTile) -> URL {
@@ -91,26 +84,26 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 			.tileKey: tile,
 			.tileSourceIdKey: hash
 		]
-		return imagePipeline.loadImage(with: request, completion: {result in
+		return imagePipeline.loadImage(with: request, completion: { [weak self] result in
 			if case .success = result {
-				Self.cachedImageLookup[self]?[tile] = true
+				self?.cachedImageLookup[tile] = true
 			}
 			completion(result)
 		})
 	}
 	
 	public func possiblyHasCachedImage(for tile: MapTile) -> Bool {
-		Self.cachedImageLookup[self]?[tile] ?? false
+		cachedImageLookup[tile] ?? false
 	}
 	
 	public func possiblyCachedTiles(for zoom: Int) -> [MapTile] {
-		Self.cachedImageLookup[self]?.keys.filter {
+		cachedImageLookup.keys.filter {
 			$0.zoom == zoom
-		} ?? []
+		}
 	}
 	
 	public func hasCachedImage(for tile: MapTile) -> Bool {
-		if let cached = Self.cachedImageLookup[self]?[tile] {
+		if let cached = cachedImageLookup[tile] {
 			return cached
 		}
 		
@@ -121,7 +114,7 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 			.tileSourceIdKey: hash
 		]
 		let contains = imagePipeline.cache.containsCachedImage(for: request)
-		Self.cachedImageLookup[self]?[tile] = contains
+		cachedImageLookup[tile] = contains
 		return contains
 	}
 	
@@ -226,7 +219,7 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 			
 			DispatchQueue.main.async { [self] in
 				for tile in tiles {
-					Self.cachedImageLookup[self]?[tile] = true
+					cachedImageLookup[tile] = true
 				}
 			}
 		}
