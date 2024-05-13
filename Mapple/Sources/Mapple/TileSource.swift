@@ -188,18 +188,41 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 	
 	private func preheatCacheLookup() {
 		DispatchQueue.global(qos: .background).async { [self] in
-			let files = (try? FileManager.default.contentsOfDirectory(at: tileCacheDirectory, includingPropertiesForKeys: nil)) ?? []
-			let tiles = files.compactMap {
-				let components = $0.lastPathComponent.components(separatedBy: "_")
-				if components.count == 4,
-				   let x = Int(components[2]),
-				   let y = Int(components[3]),
-				   let z = Int(components[1]) {
-					return MapTile(x: x, y: y, zoom: z, size: tileSize)
-				} else {
-					return nil
+			
+			guard let path = tileCacheDirectory.path.cString(using: String.Encoding.utf8) else { return }
+			guard let dir = opendir(path) else { return }
+			
+			var tiles: [MapTile] = []
+			
+			// many times faster than using FileManager.contentsOfDirectory and String.components(separatedBy)
+			while let entry = readdir(dir) {
+				let nameLength = Int(entry.pointee.d_namlen)
+				withUnsafePointer(to: &entry.pointee.d_name) {
+					$0.withMemoryRebound(to: CChar.self, capacity: nameLength) { filename in
+						var numbers: [Int] = [0, 0, 0]
+						var current: Int = -1
+						var i = 0
+						var c: Int8 = 0
+						repeat {
+							c = filename[i]
+							if c == 0x5F || c == 0 {	// '_'
+								current += 1
+								if current >= 3 { break }
+							} else if current >= 0 {
+								// parse string to int
+								numbers[current] = numbers[current] * 10 + (Int(c) - 0x30)	// '0'
+							}
+							i += 1
+						} while c != 0
+						
+						if current == 3 {
+							tiles.append(MapTile(x: numbers[1], y: numbers[2], zoom: numbers[0], size: tileSize))
+						}
+					}
 				}
 			}
+			
+			closedir(dir);
 			
 			DispatchQueue.main.async { [self] in
 				for tile in tiles {
