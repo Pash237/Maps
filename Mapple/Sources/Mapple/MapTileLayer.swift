@@ -115,7 +115,8 @@ class MapTileLayer: CALayer {
 	
 	var isAlmostLoaded: Bool {
 		if let task = imageTask {
-			return task.progress.total > 0 && Double(task.progress.fraction) > 0.4
+			let currentProgress = task.progress
+			return currentProgress.total > 0 && Double(currentProgress.fraction) > 0.4
 		}
 		return loadState == .loaded
 	}

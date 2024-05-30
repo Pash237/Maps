@@ -14,7 +14,7 @@ let package = Package(
             targets: ["Mapple"]),
     ],
     dependencies: [
-		.package(url: "https://github.com/kean/Nuke", from: "12.1.5")
+		.package(url: "https://github.com/kean/Nuke", "12.0.0"..."12.5.0")
     ],
     targets: [
         .target(
