@@ -470,6 +470,8 @@ public class MapScrollView: UIView {
 				if velocity != .zero {
 					speedToTargetCamera = 1
 					animationDisplayLink.isPaused = false
+				} else {
+					speedToTargetCamera = 0
 				}
 			} else if doubleTapDragZooming, lastTouchTravelDistance > 20 {
 				// decelerate tap-tap-drag zoom
@@ -484,6 +486,8 @@ public class MapScrollView: UIView {
 				if velocity != .zero {
 					speedToTargetCamera = 1
 					animationDisplayLink.isPaused = false
+				} else {
+					speedToTargetCamera = 0
 				}
 			}
 			
@@ -495,6 +499,7 @@ public class MapScrollView: UIView {
 			lastTouchLocation = touches.first!.location(in: mapContentsView)
 		} else {
 			previousCentroid = activeTouches.centroid(in: mapContentsView)
+			speedToTargetCamera = 0
 		}
 		
 		if activeTouches.isEmpty {
