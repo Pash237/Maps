@@ -9,7 +9,7 @@ import Foundation
 import UIKit
 import Nuke
 
-public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unchecked Sendable {
+public final class TileSource: Equatable, Hashable {
 	public let title: String
 	public let url: String
 	public let tileSize: Int	//size in points on screen
@@ -134,13 +134,6 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 	}()
 	
 	private func defaultImagePipeline() -> ImagePipeline {
-		let dataLoader: DataLoader = {
-			let config = URLSessionConfiguration.default
-			config.urlCache = nil
-			config.waitsForConnectivity = true
-			return DataLoader(configuration: config)
-		}()
-
 		ImagePipeline.disableSweep(for: tileCacheDirectory)
 		
 		tileCacheDirectory.excludeFromBackup()
@@ -152,26 +145,19 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 		ImageCache.shared.costLimit = 1024 * 1024 * 100 // 150 MB
 		ImageCache.shared.countLimit = 100
 
-		return ImagePipeline(delegate: self) {
-			$0.dataLoader = dataLoader
+		return ImagePipeline(delegate: TileSourceImagePipelineDelegate(stringHash: stringHash)) {
+			$0.dataLoader = DataLoader(configuration: .defaultForTileSource)
 			$0.dataCache = diskCache
 			$0.dataLoadingQueue.maxConcurrentOperationCount = 6
 		}
 	}
 	
 	func noCacheImagePipeline(ttl: TimeInterval) -> ImagePipeline {
-		let dataLoader: DataLoader = {
-			let config = URLSessionConfiguration.default
-			config.urlCache = nil
-			config.waitsForConnectivity = true
-			return DataLoader(configuration: config)
-		}()
-		
 		let imageCache = ImageCache()
 		imageCache.ttl = ttl
 		
-		return ImagePipeline(delegate: self) {
-			$0.dataLoader = dataLoader
+		return ImagePipeline(delegate: TileSourceImagePipelineDelegate(stringHash: stringHash)) {
+			$0.dataLoader = DataLoader(configuration: .defaultForTileSource)
 			$0.dataCache = nil
 			$0.dataLoadingQueue.maxConcurrentOperationCount = 6
 			$0.imageCache = imageCache
@@ -233,6 +219,14 @@ public final class TileSource: Equatable, Hashable, ImagePipelineDelegate, @unch
 		}
 		return minZoom...maxZoom
 	}
+}
+
+private class TileSourceImagePipelineDelegate: ImagePipelineDelegate, @unchecked Sendable {
+	let stringHash: String
+	
+	init(stringHash: String) {
+		self.stringHash = stringHash
+	}
 	
 	public func cacheKey(for request: ImageRequest, pipeline: ImagePipeline) -> String? {
 		let tile = request.userInfo[.tileKey] as! MapTile
@@ -255,6 +249,15 @@ public extension ImagePipeline {
 		let metadataFileURL = path.appendingPathComponent(".data-cache-info", isDirectory: false)
 		try? JSONEncoder().encode(metadata).write(to: metadataFileURL)
 	}
+}
+
+private extension URLSessionConfiguration {
+	static let defaultForTileSource: URLSessionConfiguration = {
+		let config = URLSessionConfiguration.default
+		config.urlCache = nil
+		config.waitsForConnectivity = true
+		return config
+	}()
 }
 
 private extension URL {
