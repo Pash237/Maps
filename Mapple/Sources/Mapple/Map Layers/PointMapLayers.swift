@@ -11,8 +11,11 @@ open class PointMapLayer: CALayer {
 	public var coordinates: Coordinates {
 		didSet {
 			if let parent = superlayer?.delegate as? PointMapLayersView {
+				CATransaction.begin()
+				CATransaction.setDisableActions(true)
 				let point = parent.projection.point(at: parent.zoom, from: coordinates)
 				position = point - parent.offset
+				CATransaction.commit()
 			}
 		}
 	}

@@ -50,6 +50,11 @@ public class MapView: MapScrollView {
 	public var onEndTracking = PassthroughSubject<AnyHashable, Never>()
 	public var trackingLayer: AnyHashable?
 	
+	public var draggingLayer: AnyHashable?
+	public var shouldStartDraggingLayer: ((AnyHashable) -> (Bool))?
+	public var onDragLayer: ((AnyHashable, Coordinates) -> ())?
+	public var onEndDraggingLayer: ((AnyHashable, Coordinates) -> ())?
+	
 	private var mapLayers: [MapViewLayer]
 	
 	private let tileMapView = TileMapView()
@@ -232,6 +237,26 @@ public class MapView: MapScrollView {
 	
 	override func onEndTracking(_ trackingLayer: AnyHashable) {
 		onEndTracking.send(trackingLayer)
+	}
+	
+	private var dragLayerOffset: CGPoint = .zero
+	override func shouldStartDragging(_ layerId: AnyHashable, at point: CGPoint) -> Bool {
+		if let layerPosition = pointLayers.mapLayer(with: layerId)?.position {
+			dragLayerOffset = layerPosition - point
+		} else {
+			dragLayerOffset = .zero
+		}
+		return shouldStartDraggingLayer?(layerId) ?? false
+	}
+	
+	override func didDragLayer(_ layerId: AnyHashable, to point: CGPoint) {
+		let coordinates = coordinates(at: point + dragLayerOffset)
+		onDragLayer?(layerId, coordinates)
+	}
+	
+	override func didEndDraggingLayer(_ layerId: AnyHashable, at point: CGPoint) {
+		let coordinates = coordinates(at: point + dragLayerOffset)
+		onEndDraggingLayer?(layerId, coordinates)
 	}
 }
 

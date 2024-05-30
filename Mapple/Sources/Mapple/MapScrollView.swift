@@ -68,6 +68,8 @@ public class MapScrollView: UIView {
 	private var singleTapPossible = false
 	private var longPressWorkItem: DispatchWorkItem?
 	private var trackingLayer: AnyHashable?
+	private var draggingLayer: AnyHashable?
+	private var draggingPoint: CGPoint = .zero
 	
 	private let initialRotationGestureThreshold: Radians = 0.25
 	private var rotationGestureThreshold: Radians = 0.25
@@ -211,11 +213,15 @@ public class MapScrollView: UIView {
 			if event.activeTouches.count == 1 && longPressGestureEnabled {
 				longPressWorkItem = DispatchWorkItem(block: {[weak self] in
 					guard let self else { return }
+					if let trackingLayer, shouldStartDragging(trackingLayer, at: centroid) {
+						draggingLayer = trackingLayer
+					} else {
+						onLongPress(point: centroid)
+					}
 					if let trackingLayer {
 						onEndTracking(trackingLayer)
 						self.trackingLayer = nil
 					}
-					onLongPress(point: previousCentroid ?? centroid)
 				})
 				DispatchQueue.main.asyncAfter(deadline: .now() + longPressDuration + 0.01, execute: longPressWorkItem!)
 			}
@@ -232,6 +238,7 @@ public class MapScrollView: UIView {
 			touchesBeganAngle = event.angle()
 			touchesBeganDistance = event.activeTouches[0].location(in: nil).distance(to: event.activeTouches[1].location(in: nil))
 			previousAngle = touchesBeganAngle
+			endDragging()
 		}
 		
 		camera = currentCamera()
@@ -276,14 +283,19 @@ public class MapScrollView: UIView {
 		
 		CADisplayLink.enableProMotion()
 		
-		if previousTouchesCount != allTouches.count && (dragGestureEnabled || allTouches.count > 1) {
+		if let draggingLayer, let touch = allTouches.first {
+			draggingPoint = touch.location(in: mapContentsView)
+			didDragLayer(draggingLayer, to: draggingPoint)
+		}
+		
+		if previousTouchesCount != allTouches.count && ((dragGestureEnabled && draggingLayer == nil) || allTouches.count > 1) {
 			offset += centroid - previousCentroid
 			
 			centroidToCalculateVelocity = centroid
 			timestampToCalculateVelocity = event.timestamp
 		}
 		
-		if !doubleTapDragZooming && (dragGestureEnabled || allTouches.count > 1) {
+		if !doubleTapDragZooming && ((dragGestureEnabled && draggingLayer == nil) || allTouches.count > 1) {
 			offset += (previousCentroid - centroid)
 		}
 		
@@ -450,7 +462,7 @@ public class MapScrollView: UIView {
 				velocity = .zero
 			}
 			
-			if dragGestureEnabled, doubleTapZoomTimestamp == nil, !doubleTapDragZooming, !accidentallyMovedOneFingerAfterZoomGesture {
+			if dragGestureEnabled, draggingLayer == nil, doubleTapZoomTimestamp == nil, !doubleTapDragZooming, !accidentallyMovedOneFingerAfterZoomGesture {
 				// decelerate drag
 				targetCamera = Camera(center: coordinates(at: contentBounds.center - velocity*0.1),
 									  zoom: targetCamera.zoom,
@@ -488,6 +500,7 @@ public class MapScrollView: UIView {
 		if activeTouches.isEmpty {
 			twoFingerTravelDistance = 0
 			scrollChange = .zero
+			endDragging()
 		}
 		
 		lastTouchEndedEventTimestamp = event.timestamp
@@ -520,6 +533,7 @@ public class MapScrollView: UIView {
 		longPressWorkItem?.cancel()
 		singleTapPossible = false
 		endTracking()
+		endDragging()
 	}
 	
 	var mapContentsView: UIView {
@@ -582,6 +596,25 @@ public class MapScrollView: UIView {
 	
 	func onEndTracking(_ trackingLayer: AnyHashable) {
 		// override if necessary
+	}
+	
+	func endDragging() {
+		if let draggingLayer {
+			didEndDraggingLayer(draggingLayer, at: draggingPoint)
+			self.draggingLayer = nil
+		}
+	}
+	
+	func shouldStartDragging(_ layer: AnyHashable, at point: CGPoint) -> Bool {
+		false
+	}
+	
+	func didDragLayer(_ layer: AnyHashable, to point: CGPoint) {
+		
+	}
+	
+	func didEndDraggingLayer(_ layer: AnyHashable, at point: CGPoint) {
+		
 	}
 	
 	public var contentBounds: CGRect {
