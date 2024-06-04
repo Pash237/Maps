@@ -16,15 +16,12 @@ public class MapScrollView: UIView {
 		didSet {
 			guard contentInset != oldValue else { return }
 			
+			let oldCenter = camera.center
 			camera = currentCamera()
-			targetCamera = camera
-						
-			// keep map center in the center when content insets changes
-			// TODO: keep just-touched map region on screen
-//			guard oldValue != .zero else { return }
-//			let oldBounds = bounds.inset(by: oldValue)
-//			let cameraAtOldCenter = Camera(center: coordinates(at: oldBounds.center), zoom: zoom)
-//			setCamera(cameraAtOldCenter, animated: true)
+			let newCenter = camera.center
+			
+			// avoid unwanted animation change when contentInset changes during animation
+			targetCamera = targetCamera.with(center: targetCamera.center + newCenter - oldCenter)
 		}
 	}
 	
