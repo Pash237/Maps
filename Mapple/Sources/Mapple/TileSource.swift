@@ -17,13 +17,18 @@ public final class TileSource: Equatable, Hashable {
 	public let maxZoom: Int
 	public let headers: [String:String]
 	
-	private var imagePipeline: ImagePipeline!
+	private lazy var imagePipeline: ImagePipeline = {
+		preheatCacheLookup()
+		return if let ttl { noCacheImagePipeline(ttl: ttl) } else { defaultImagePipeline() }
+	}()
+	
 	public let hash: Int
 	public let stringHash: String
+	public let ttl: TimeInterval?
 	
 	private var cachedImageLookup: [MapTile:Bool] = [:]
 
-	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, headers: [String:String] = [:], imagePipeline: ImagePipeline? = nil) {
+	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, headers: [String:String] = [:]) {
 		self.title = title
 		self.url = url
 		self.headers = headers
@@ -32,9 +37,7 @@ public final class TileSource: Equatable, Hashable {
 		self.maxZoom = maxZoom
 		self.hash = abs(url.hash)
 		self.stringHash = String(hash % 1679616, radix: 36)
-		self.imagePipeline = imagePipeline ?? defaultImagePipeline()
-		
-		preheatCacheLookup()
+		self.ttl = nil
 	}
 	
 	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, headers: [String:String] = [:], ttl: TimeInterval) {
@@ -46,7 +49,7 @@ public final class TileSource: Equatable, Hashable {
 		self.maxZoom = maxZoom
 		self.hash = abs(url.hash)
 		self.stringHash = String(hash % 1679616, radix: 36)
-		self.imagePipeline = noCacheImagePipeline(ttl: ttl)
+		self.ttl = ttl
 	}
 
 	public func url(for tile: MapTile) -> URL {
@@ -163,7 +166,6 @@ public final class TileSource: Equatable, Hashable {
 			$0.imageCache = imageCache
 		}
 	}
-	
 	
 	private func preheatCacheLookup() {
 		DispatchQueue.global(qos: .background).async { [self] in
