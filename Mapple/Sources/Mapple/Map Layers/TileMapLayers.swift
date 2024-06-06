@@ -188,6 +188,7 @@ class TileMapView: UIView, MapViewLayer {
 
 		for tileSource in tileSources {
 			let tileLayers = layers(in: tileSource, sorted: true)
+			let bestZoom = bestZoom.clamped(to: tileSource.zoomRange)
 			for tileLayer in tileLayers {
 				if tileLayer.tile.zoom != bestZoom {
 					// we're zooming out and can throw away unused smaller tiles
@@ -238,6 +239,7 @@ class TileMapView: UIView, MapViewLayer {
 		
 		for tileSource in tileSources {
 			let tileLayers = layers(in: tileSource, sorted: true)
+			let bestZoom = bestZoom.clamped(to: tileSource.zoomRange)
 			for tileLayer in tileLayers {
 				if tileLayer.tile.zoom != bestZoom && tileLayer.loadState != .loaded && !tileLayer.isAlmostLoaded && !tileSource.hasCachedImage(for: tileLayer.tile) {
 					// remove layer if its zoom doesn't match and it's not loaded
@@ -250,6 +252,7 @@ class TileMapView: UIView, MapViewLayer {
 		//TODO: mask larger tiles to avoid overlaps
 		for tileSource in tileSources {
 			let tileLayers = layers(in: tileSource, sorted: true)
+			let bestZoom = bestZoom.clamped(to: tileSource.zoomRange)
 			for tileLayer in tileLayers {
 				if tileLayer.tile.zoom != bestZoom {
 					let tileVisiblePart = tileLayer.frame.intersection(bounds.insetBy(dx: -margin.x/2, dy: -margin.y/2))
