@@ -16,6 +16,7 @@ public final class TileSource: Equatable, Hashable {
 	public let minZoom: Int
 	public let maxZoom: Int
 	public let headers: [String:String]
+	public var previewUrl: String?
 	
 	private lazy var imagePipeline: ImagePipeline = {
 		preheatCacheLookup()
@@ -28,7 +29,7 @@ public final class TileSource: Equatable, Hashable {
 	
 	private var cachedImageLookup: [MapTile:Bool] = [:]
 
-	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, headers: [String:String] = [:]) {
+	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, headers: [String:String] = [:], previewUrl: String? = nil) {
 		self.title = title
 		self.url = url
 		self.headers = headers
@@ -38,9 +39,10 @@ public final class TileSource: Equatable, Hashable {
 		self.hash = abs(url.hash)
 		self.stringHash = String(hash % 1679616, radix: 36)
 		self.ttl = nil
+		self.previewUrl = previewUrl
 	}
 	
-	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, headers: [String:String] = [:], ttl: TimeInterval) {
+	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, headers: [String:String] = [:], ttl: TimeInterval, previewUrl: String? = nil) {
 		self.title = title
 		self.url = url
 		self.headers = headers
@@ -50,6 +52,7 @@ public final class TileSource: Equatable, Hashable {
 		self.hash = abs(url.hash)
 		self.stringHash = String(hash % 1679616, radix: 36)
 		self.ttl = ttl
+		self.previewUrl = previewUrl
 	}
 
 	public func url(for tile: MapTile) -> URL {
