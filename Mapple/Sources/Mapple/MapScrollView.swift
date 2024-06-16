@@ -212,6 +212,7 @@ public class MapScrollView: UIView {
 					guard let self else { return }
 					if let trackingLayer, shouldStartDragging(trackingLayer, at: centroid) {
 						draggingLayer = trackingLayer
+						draggingPoint = centroid
 					} else {
 						onLongPress(point: centroid)
 					}
