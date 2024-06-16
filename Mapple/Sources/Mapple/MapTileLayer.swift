@@ -67,6 +67,7 @@ class MapTileLayer: CALayer {
 		contentsGravity = .resize
 		frame = CGRect(x: 0, y: 0, width: tile.size, height: tile.size)
 		isOpaque = false
+		opacity = tileSource.opacity
 	}
 	
 	func loadImage(priority: ImageRequest.Priority? = nil) {

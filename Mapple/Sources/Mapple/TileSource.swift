@@ -16,7 +16,8 @@ public final class TileSource: Equatable, Hashable {
 	public let minZoom: Int
 	public let maxZoom: Int
 	public let headers: [String:String]
-	public var previewUrl: String?
+	public var thumbnailUrl: String?
+	public var opacity: Float = 1
 	
 	private lazy var imagePipeline: ImagePipeline = {
 		preheatCacheLookup()
@@ -29,30 +30,32 @@ public final class TileSource: Equatable, Hashable {
 	
 	private var cachedImageLookup: [MapTile:Bool] = [:]
 
-	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, headers: [String:String] = [:], previewUrl: String? = nil) {
+	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, opacity: Float = 1.0, headers: [String:String] = [:], thumbnailUrl: String? = nil) {
 		self.title = title
 		self.url = url
 		self.headers = headers
 		self.tileSize = tileSize
+		self.opacity = opacity
 		self.minZoom = minZoom
 		self.maxZoom = maxZoom
 		self.hash = abs(url.hash)
 		self.stringHash = String(hash % 1679616, radix: 36)
 		self.ttl = nil
-		self.previewUrl = previewUrl
+		self.thumbnailUrl = thumbnailUrl
 	}
 	
-	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, headers: [String:String] = [:], ttl: TimeInterval, previewUrl: String? = nil) {
+	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, opacity: Float = 1.0, headers: [String:String] = [:], ttl: TimeInterval, thumbnailUrl: String? = nil) {
 		self.title = title
 		self.url = url
 		self.headers = headers
 		self.tileSize = tileSize
+		self.opacity = opacity
 		self.minZoom = minZoom
 		self.maxZoom = maxZoom
 		self.hash = abs(url.hash)
 		self.stringHash = String(hash % 1679616, radix: 36)
 		self.ttl = ttl
-		self.previewUrl = previewUrl
+		self.thumbnailUrl = thumbnailUrl
 	}
 
 	public func url(for tile: MapTile) -> URL {
