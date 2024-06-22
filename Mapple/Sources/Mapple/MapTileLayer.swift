@@ -14,7 +14,7 @@ public struct MapTile: Equatable, Hashable {
 	public var zoom: Int
 	public var size = 512
 	
-	private let hash: Int
+	public let hash: Int
 	
 	public init(x: Int, y: Int, zoom: Int, size: Int = 512) {
 		self.x = x
