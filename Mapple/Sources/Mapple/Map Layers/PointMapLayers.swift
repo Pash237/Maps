@@ -10,6 +10,7 @@ import UIKit
 open class PointMapLayer: CALayer {
 	public var coordinates: Coordinates {
 		didSet {
+			guard oldValue != coordinates else { return }
 			if let parent = superlayer?.delegate as? PointMapLayersView {
 				CATransaction.begin()
 				CATransaction.setDisableActions(true)
