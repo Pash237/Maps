@@ -622,8 +622,8 @@ public class MapScrollView: UIView {
 	
 	public var contentBounds: CGRect {
 		var contentInset = contentInset
-		if contentInset.bottom > bounds.height*0.5 {
-			contentInset.bottom = bounds.height*0.5
+		if contentInset.bottom > bounds.height*0.65 {
+			contentInset.bottom = 67
 		}
 		return bounds.inset(by: contentInset)
 	}
