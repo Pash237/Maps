@@ -72,7 +72,7 @@ public class PointMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 		drawingLayer.id = id.hashValue
 		drawingLayersConfigs[drawingLayer.id] = configureLayer
 		drawingLayers[id] = drawingLayer
-		drawingLayer.scale = min(max(1.0 - (11.0 - zoom) / (11.0 - 7.0), 0.0), 1.0)
+		drawingLayer.scale = Self.scale(for: zoom)
 		layer.addSublayer(drawingLayer)
 		
 		redrawLayer(id: id)
@@ -118,7 +118,7 @@ public class PointMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 		
 		if drawnLayerZoom != zoom || drawnLayerOffset.distance(to: offset) > bounds.width {
 			for layer in drawingLayers.values {
-				layer.scale = min(max(1.0 - (11.0 - zoom) / (11.0 - 7.0), 0.0), 1.0)
+				layer.scale = Self.scale(for: zoom)
 			}
 			redrawLayers()
 		}
@@ -189,5 +189,8 @@ public class PointMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 		projection.coordinates(from: offset + screenPoint, at: zoom)
 	}
 	
+	public static func scale(for zoom: Double) -> Double {
+		min(max(1.0 - (11.0 - zoom) / (11.0 - 7.0), 0.0), 1.0)
+	}
 }
 
