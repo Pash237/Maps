@@ -17,6 +17,7 @@ public final class TileSource: Equatable, Hashable {
 	public let maxZoom: Int
 	public let headers: [String:String]
 	public var thumbnailUrl: String?
+	public var attribution: String?
 	public var opacity: Float = 1
 	
 	private lazy var imagePipeline: ImagePipeline = {
@@ -30,7 +31,7 @@ public final class TileSource: Equatable, Hashable {
 	
 	private var cachedImageLookup: [MapTile:Bool] = [:]
 
-	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, opacity: Float = 1.0, headers: [String:String] = [:], thumbnailUrl: String? = nil) {
+	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, opacity: Float = 1.0, headers: [String:String] = [:], thumbnailUrl: String? = nil, attribution: String? = nil) {
 		self.title = title
 		self.url = url
 		self.headers = headers
@@ -42,9 +43,10 @@ public final class TileSource: Equatable, Hashable {
 		self.stringHash = String(hash % 1679616, radix: 36)
 		self.ttl = nil
 		self.thumbnailUrl = thumbnailUrl
+		self.attribution = attribution
 	}
 	
-	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, opacity: Float = 1.0, headers: [String:String] = [:], ttl: TimeInterval, thumbnailUrl: String? = nil) {
+	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, opacity: Float = 1.0, headers: [String:String] = [:], ttl: TimeInterval, thumbnailUrl: String? = nil, attribution: String? = nil) {
 		self.title = title
 		self.url = url
 		self.headers = headers
@@ -56,6 +58,7 @@ public final class TileSource: Equatable, Hashable {
 		self.stringHash = String(hash % 1679616, radix: 36)
 		self.ttl = ttl
 		self.thumbnailUrl = thumbnailUrl
+		self.attribution = attribution
 	}
 
 	public func url(for tile: MapTile) -> URL {
@@ -72,6 +75,7 @@ public final class TileSource: Equatable, Hashable {
 			.replacingOccurrences(of: "{0123}", with: ["0", "1", "2", "3"][abs(tile.x + tile.y + tile.zoom) % 4])
 			.replacingOccurrences(of: "{123}", with: ["1", "2", "3"][abs(tile.x + tile.y + tile.zoom) % 3])
 			.replacingOccurrences(of: "{1234}", with: ["1", "2", "3", "4"][abs(tile.x + tile.y + tile.zoom) % 4])
+			.replacingOccurrences(of: "{hash}", with: ((tile.x % 4) + (tile.y % 4) * 4).description)
 			//TODO: support {switch:a,b,c} and [abc]
 			//TODO: support date formats
 		)!
