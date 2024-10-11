@@ -23,6 +23,7 @@ class TileMapView: UIView, MapViewLayer {
 		super.init(frame: frame)
 		
 		isUserInteractionEnabled = false
+		layer.allowsGroupOpacity = true
 		NotificationCenter.default.publisher(for: .mapTileLoaded)
 			.throttle(for: 0.005, scheduler: DispatchQueue.main, latest: true)
 			.sink() {[weak self] _ in
