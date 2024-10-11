@@ -105,7 +105,7 @@ public class SpatialMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 	public func layerIds(at coordinates: Coordinates, threshold: CGFloat = 30.0) -> [(key: AnyHashable, distance: CGFloat)] {
 		drawingLayers.compactMap { key, layer in
 			let random = CGFloat(key.hashValue) / CGFloat(Int.max)	// helps to pick identical points
-			let point = projection.point(at: zoom, from: coordinates) + CGPoint(x: random, y: random)
+			let point = projection.point(at: zoom, from: coordinates) + CGPoint(random, random)
 			if let distance = layer.distance(to: point), distance < threshold {
 				return (key, distance)
 			} else {

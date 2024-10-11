@@ -34,6 +34,10 @@ public extension CGPoint {
 	var angle: CGFloat {
 		atan2(y, x)
 	}
+	
+	init(_ x: CGFloat, _ y: CGFloat) {
+		self.init(x: x, y: y)
+	}
 }
 
 

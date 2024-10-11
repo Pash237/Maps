@@ -105,6 +105,11 @@ public struct CoordinateBounds: Codable, Hashable, Equatable, CustomStringConver
 		Coordinates(southwest.latitude, northeast.longitude)
 	}
 	
+	public var minLatitude: Double { min(northeast.latitude, southwest.latitude) }
+	public var maxLatitude: Double { max(northeast.latitude, southwest.latitude) }
+	public var minLongitude: Double { min(northeast.longitude, southwest.longitude) }
+	public var maxLongitude: Double { max(northeast.longitude, southwest.longitude) }
+	
 	public func contains(_ coordinates: Coordinates) -> Bool {
 		let latitude = coordinates.latitude
 		let longitude = coordinates.longitude.remainder(dividingBy: 360.0)
@@ -142,6 +147,27 @@ public struct CoordinateBounds: Codable, Hashable, Equatable, CustomStringConver
 			northeast: Coordinates(northeast.latitude + inset.latitude, northeast.longitude + inset.latitude),
 			southwest: Coordinates(southwest.latitude - inset.latitude, southwest.longitude - inset.latitude)
 		)
+	}
+}
+
+extension CLLocationCoordinate2D: Codable {
+	enum CodingKeys: CodingKey {
+		case latitude
+		case longitude
+	}
+
+	public func encode(to encoder: Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(latitude, forKey: .latitude)
+		try container.encode(longitude, forKey: .longitude)
+	}
+
+	public init(from decoder: Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		let latitude = try container.decode(CLLocationDegrees.self, forKey: .latitude)
+		let longitude = try container.decode(CLLocationDegrees.self, forKey: .longitude)
+
+		self.init(latitude: latitude, longitude: longitude)
 	}
 }
 
