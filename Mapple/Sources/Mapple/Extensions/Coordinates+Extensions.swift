@@ -145,8 +145,6 @@ public struct CoordinateBounds: Codable, Hashable, Equatable, CustomStringConver
 	}
 }
 
-}
-
 public extension Array where Element == Coordinates {
 	func centroid() -> Coordinates {
 		guard !isEmpty else {
