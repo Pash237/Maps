@@ -64,6 +64,7 @@ public class MapScrollView: UIView {
 	
 	private var singleTapPossible = false
 	private var longPressWorkItem: DispatchWorkItem?
+	private var isLongPressing = false
 	private var trackingLayer: AnyHashable?
 	private var draggingLayer: AnyHashable?
 	private var draggingPoint: CGPoint = .zero
@@ -207,6 +208,7 @@ public class MapScrollView: UIView {
 			doubleTapDragZooming = false
 			
 			longPressWorkItem?.cancel()
+			isLongPressing = false
 			if event.activeTouches.count == 1 && longPressGestureEnabled {
 				longPressWorkItem = DispatchWorkItem(block: {[weak self] in
 					guard let self else { return }
@@ -214,6 +216,7 @@ public class MapScrollView: UIView {
 						draggingLayer = trackingLayer
 						draggingPoint = centroid
 					} else {
+						isLongPressing = true
 						onLongPress(point: centroid)
 					}
 					if let trackingLayer {
@@ -293,7 +296,7 @@ public class MapScrollView: UIView {
 			timestampToCalculateVelocity = event.timestamp
 		}
 		
-		if !doubleTapDragZooming && ((dragGestureEnabled && draggingLayer == nil) || allTouches.count > 1) {
+		if !doubleTapDragZooming && ((dragGestureEnabled && draggingLayer == nil) || allTouches.count > 1) && !isLongPressing {
 			offset += (previousCentroid - centroid)
 		}
 		
@@ -380,6 +383,10 @@ public class MapScrollView: UIView {
 				offset -= zoomCenterOnMap * zoomChange
 			}
 			
+			if isLongPressing {
+				onMoveLongPress(point: centroid)
+			}
+			
 			lastTouchTravelDistance += (previousCentroid - centroid).length
 		}
 		
@@ -429,6 +436,10 @@ public class MapScrollView: UIView {
 		}
 		
 		longPressWorkItem?.cancel()
+		if isLongPressing, activeTouches.isEmpty {
+			onEndLongPress(point: event.centroid())
+		}
+		isLongPressing = false
 		
 		if activeTouches.isEmpty && touches.count == 1 {
 			let timeSinceTouchBegan = event.timestamp - (touchesBeganTimestamps[touches.first!.hash] ?? 0)
@@ -579,6 +590,14 @@ public class MapScrollView: UIView {
 	}
 	
 	func onLongPress(point: CGPoint) {
+		// override if necessary
+	}
+	
+	func onMoveLongPress(point: CGPoint) {
+		// override if necessary
+	}
+	
+	func onEndLongPress(point: CGPoint) {
 		// override if necessary
 	}
 	

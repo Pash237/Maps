@@ -46,6 +46,8 @@ public class MapView: MapScrollView {
 	public var onTap = PassthroughSubject<Coordinates, Never>()
 	public var onTapOnLayer = PassthroughSubject<AnyHashable, Never>()
 	public var onLongPress = PassthroughSubject<Coordinates, Never>()
+	public var onMoveLongPress = PassthroughSubject<Coordinates, Never>()
+	public var onEndLongPress = PassthroughSubject<Coordinates, Never>()
 	public var onBeginTracking = PassthroughSubject<AnyHashable, Never>()
 	public var onEndTracking = PassthroughSubject<AnyHashable, Never>()
 	public var trackingLayer: AnyHashable?
@@ -227,6 +229,16 @@ public class MapView: MapScrollView {
 		onLongPress.send(coordinates)
 	}
 	
+	override func onMoveLongPress(point: CGPoint) {
+		let coordinates = coordinates(at: point)
+		onMoveLongPress.send(coordinates)
+	}
+	
+	override func onEndLongPress(point: CGPoint) {
+		let coordinates = coordinates(at: point)
+		onEndLongPress.send(coordinates)
+	}
+	
 	override func trackingLayer(at point: CGPoint) -> AnyHashable? {
 		layerId(at: coordinates(at: point))
 	}
@@ -242,6 +254,7 @@ public class MapView: MapScrollView {
 	private var dragLayerOffset: CGPoint = .zero
 	override func shouldStartDragging(_ layerId: AnyHashable, at point: CGPoint) -> Bool {
 		if let layerPosition = pointLayers.mapLayer(with: layerId)?.position {
+			// TODO: doesn't work for waypoints :(
 			dragLayerOffset = layerPosition - point
 		} else {
 			dragLayerOffset = .zero
