@@ -27,6 +27,10 @@ public extension CGPoint {
 		hypot(x, y)
 	}
 	
+	var maxDimension: CGFloat {
+		max(abs(x), abs(y))
+	}
+	
 	var angle: CGFloat {
 		atan2(y, x)
 	}

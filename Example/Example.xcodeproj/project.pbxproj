@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 55;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -11,7 +11,8 @@
 		F7852BFF28525EEF002BCEAD /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7852BFE28525EEF002BCEAD /* ViewController.swift */; };
 		F7852C0428525EF0002BCEAD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F7852C0328525EF0002BCEAD /* Assets.xcassets */; };
 		F7852C0728525EF0002BCEAD /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F7852C0528525EF0002BCEAD /* LaunchScreen.storyboard */; };
-		F7852C1328526100002BCEAD /* Mapple in Frameworks */ = {isa = PBXBuildFile; productRef = F7852C1228526100002BCEAD /* Mapple */; };
+		F7913AD52CB7289800EF82EE /* Mapple in Frameworks */ = {isa = PBXBuildFile; productRef = F7852C1228526100002BCEAD /* Mapple */; };
+		F7913AD82CB728B600EF82EE /* Mapple in Frameworks */ = {isa = PBXBuildFile; productRef = F7913AD72CB728B600EF82EE /* Mapple */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -21,7 +22,6 @@
 		F7852C0328525EF0002BCEAD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F7852C0628525EF0002BCEAD /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		F7852C0828525EF0002BCEAD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		F7852C10285260B8002BCEAD /* Mapple */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = Mapple; path = ../Mapple; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -29,7 +29,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F7852C1328526100002BCEAD /* Mapple in Frameworks */,
+				F7913AD52CB7289800EF82EE /* Mapple in Frameworks */,
+				F7913AD82CB728B600EF82EE /* Mapple in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -39,7 +40,6 @@
 		F7852BEE28525EEF002BCEAD = {
 			isa = PBXGroup;
 			children = (
-				F7852C0E28526078002BCEAD /* Packages */,
 				F7852BF928525EEF002BCEAD /* Example */,
 				F7852BF828525EEF002BCEAD /* Products */,
 				F7852C1128526100002BCEAD /* Frameworks */,
@@ -64,14 +64,6 @@
 				F7852C0828525EF0002BCEAD /* Info.plist */,
 			);
 			path = Example;
-			sourceTree = "<group>";
-		};
-		F7852C0E28526078002BCEAD /* Packages */ = {
-			isa = PBXGroup;
-			children = (
-				F7852C10285260B8002BCEAD /* Mapple */,
-			);
-			name = Packages;
 			sourceTree = "<group>";
 		};
 		F7852C1128526100002BCEAD /* Frameworks */ = {
@@ -99,6 +91,7 @@
 			name = Example;
 			packageProductDependencies = (
 				F7852C1228526100002BCEAD /* Mapple */,
+				F7913AD72CB728B600EF82EE /* Mapple */,
 			);
 			productName = Example;
 			productReference = F7852BF728525EEF002BCEAD /* Example.app */;
@@ -128,6 +121,9 @@
 				Base,
 			);
 			mainGroup = F7852BEE28525EEF002BCEAD;
+			packageReferences = (
+				F7913AD62CB728B600EF82EE /* XCLocalSwiftPackageReference "../Mapple" */,
+			);
 			productRefGroup = F7852BF828525EEF002BCEAD /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -366,8 +362,19 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		F7913AD62CB728B600EF82EE /* XCLocalSwiftPackageReference "../Mapple" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Mapple;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		F7852C1228526100002BCEAD /* Mapple */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Mapple;
+		};
+		F7913AD72CB728B600EF82EE /* Mapple */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Mapple;
 		};
