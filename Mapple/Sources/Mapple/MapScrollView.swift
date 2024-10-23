@@ -383,7 +383,7 @@ public class MapScrollView: UIView {
 				offset -= zoomCenterOnMap * zoomChange
 			}
 			
-			if isLongPressing {
+			if isLongPressing, lastTouchTravelDistance > 30 {
 				onMoveLongPress(point: centroid)
 			}
 			
