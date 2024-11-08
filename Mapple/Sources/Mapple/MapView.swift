@@ -53,7 +53,7 @@ public class MapView: MapScrollView {
 	public var trackingLayer: AnyHashable?
 	
 	public var draggingLayer: AnyHashable?
-	public var shouldStartDraggingLayer: ((AnyHashable) -> (Bool))?
+	public var shouldStartDraggingLayer: ((AnyHashable, Coordinates) -> (AnyHashable?))?
 	public var onDragLayer: ((AnyHashable, Coordinates) -> ())?
 	public var onEndDraggingLayer: ((AnyHashable, Coordinates) -> ())?
 	
@@ -252,14 +252,14 @@ public class MapView: MapScrollView {
 	}
 	
 	private var dragLayerOffset: CGPoint = .zero
-	override func shouldStartDragging(_ layerId: AnyHashable, at point: CGPoint) -> Bool {
+	override func shouldStartDragging(_ layerId: AnyHashable, at point: CGPoint) -> AnyHashable? {
 		if let layerPosition = pointLayers.mapLayer(with: layerId)?.position {
 			// TODO: doesn't work for waypoints :(
 			dragLayerOffset = layerPosition - point
 		} else {
 			dragLayerOffset = .zero
 		}
-		return shouldStartDraggingLayer?(layerId) ?? false
+		return shouldStartDraggingLayer?(layerId, coordinates(at: point)) ?? nil
 	}
 	
 	override func didDragLayer(_ layerId: AnyHashable, to point: CGPoint) {

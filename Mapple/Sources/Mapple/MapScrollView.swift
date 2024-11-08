@@ -212,8 +212,8 @@ public class MapScrollView: UIView {
 			if event.activeTouches.count == 1 && longPressGestureEnabled {
 				longPressWorkItem = DispatchWorkItem(block: {[weak self] in
 					guard let self else { return }
-					if let trackingLayer, shouldStartDragging(trackingLayer, at: centroid) {
-						draggingLayer = trackingLayer
+					if let trackingLayer, let layerToDrag = shouldStartDragging(trackingLayer, at: centroid) {
+						draggingLayer = layerToDrag
 						draggingPoint = centroid
 					} else {
 						isLongPressing = true
@@ -627,8 +627,8 @@ public class MapScrollView: UIView {
 		}
 	}
 	
-	func shouldStartDragging(_ layer: AnyHashable, at point: CGPoint) -> Bool {
-		false
+	func shouldStartDragging(_ layer: AnyHashable, at point: CGPoint) -> AnyHashable? {
+		nil
 	}
 	
 	func didDragLayer(_ layer: AnyHashable, to point: CGPoint) {
