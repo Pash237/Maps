@@ -213,8 +213,7 @@ public class MapScrollView: UIView {
 				longPressWorkItem = DispatchWorkItem(block: {[weak self] in
 					guard let self else { return }
 					if let trackingLayer, let layerToDrag = shouldStartDragging(trackingLayer, at: centroid) {
-						draggingLayer = layerToDrag
-						draggingPoint = centroid
+						startDragging(layerToDrag, at: centroid)
 					} else {
 						isLongPressing = true
 						onLongPress(point: centroid)
@@ -637,6 +636,12 @@ public class MapScrollView: UIView {
 	
 	func didEndDraggingLayer(_ layer: AnyHashable, at point: CGPoint) {
 		
+	}
+	
+	public func startDragging(_ layer: AnyHashable, at point: CGPoint?) {
+		draggingLayer = layer
+		draggingPoint = point ?? previousCentroid ?? .zero
+		isLongPressing = false
 	}
 	
 	public var contentBounds: CGRect {
