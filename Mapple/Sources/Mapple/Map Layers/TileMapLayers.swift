@@ -77,6 +77,11 @@ class TileMapView: UIView, MapViewLayer {
 			if tileLayersCache[tileSource] == nil {
 				tileLayersCache[tileSource] = [:]
 			}
+			
+			guard max.x - min.x < 20, max.y - min.y < 20 else {
+				// if a tile source min zoom is too large, there might be too many tiles on the screen
+				continue
+			}
 		
 			for x in Int(min.x)...Int(max.x) {
 				for y in Int(min.y)...Int(max.y) {
