@@ -63,21 +63,50 @@ public final class TileSource: Equatable, Hashable {
 
 	public func url(for tile: MapTile) -> URL {
 		URL(string: url
-			.replacingOccurrences(of: "{x}", with: "\(tile.x)")
-			.replacingOccurrences(of: "{y}", with: "\(tile.y)")
-			.replacingOccurrences(of: "{z}", with: "\(tile.zoom)")
-			.replacingOccurrences(of: "{zoom}", with: "\(tile.zoom)")
-			.replacingOccurrences(of: "{ratio}", with: UIScreen.main.scale > 1 ? "@2x" : "")
-			.replacingOccurrences(of: "{server}", with: ["a", "b", "c"][abs(tile.x + tile.y + tile.zoom) % 3])
-			.replacingOccurrences(of: "{abc}", with: ["a", "b", "c"][abs(tile.x + tile.y + tile.zoom) % 3])
-			.replacingOccurrences(of: "{abcd}", with: ["a", "b", "c", "d"][abs(tile.x + tile.y + tile.zoom) % 4])
-			.replacingOccurrences(of: "{012}", with: ["0", "1", "2"][abs(tile.x + tile.y + tile.zoom) % 3])
-			.replacingOccurrences(of: "{0123}", with: ["0", "1", "2", "3"][abs(tile.x + tile.y + tile.zoom) % 4])
-			.replacingOccurrences(of: "{123}", with: ["1", "2", "3"][abs(tile.x + tile.y + tile.zoom) % 3])
-			.replacingOccurrences(of: "{1234}", with: ["1", "2", "3", "4"][abs(tile.x + tile.y + tile.zoom) % 4])
-			.replacingOccurrences(of: "{hash}", with: ((tile.x % 4) + (tile.y % 4) * 4).description)
+			.replacingMultipleOccurrences([
+				"{x}": "\(tile.x)",
+				"{y}": "\(tile.y)",
+				"{z}": "\(tile.zoom)",
+				"{$x}": "\(tile.x)",
+				"{$y}": "\(tile.y)",
+				"{$z}": "\(tile.zoom)",
+				"{TileCol}": "\(tile.x)",
+				"{TileRow}": "\(tile.y)",
+				"{TileMatrix}": "\(tile.zoom)",
+				"{zoom}": "\(tile.zoom)",
+				"{ratio}": UIScreen.main.scale > 1 ? "@2x" : "",
+				"{server}": ["a", "b", "c"][abs(tile.x + tile.y + tile.zoom) % 3],
+				"{abc}": ["a", "b", "c"][abs(tile.x + tile.y + tile.zoom) % 3],
+				"{abcd}": ["a", "b", "c", "d"][abs(tile.x + tile.y + tile.zoom) % 4],
+				"{012}": ["0", "1", "2"][abs(tile.x + tile.y + tile.zoom) % 3],
+				"{0123}": ["0", "1", "2", "3"][abs(tile.x + tile.y + tile.zoom) % 4],
+				"{123}": ["1", "2", "3"][abs(tile.x + tile.y + tile.zoom) % 3],
+				"{1234}": ["1", "2", "3", "4"][abs(tile.x + tile.y + tile.zoom) % 4],
+				"{hash}": ((tile.x % 4) + (tile.y % 4) * 4).description
+			])
+					  
+//			.replacingOccurrences(of: "{x}", with: "\(tile.x)")
+//			.replacingOccurrences(of: "{y}", with: "\(tile.y)")
+//			.replacingOccurrences(of: "{z}", with: "\(tile.zoom)")
+//			.replacingOccurrences(of: "{$x}", with: "\(tile.x)")
+//			.replacingOccurrences(of: "{$y}", with: "\(tile.y)")
+//			.replacingOccurrences(of: "{$z}", with: "\(tile.zoom)")
+//			.replacingOccurrences(of: "{TileRow}", with: "\(tile.x)")
+//			.replacingOccurrences(of: "{TileCol}", with: "\(tile.y)")
+//			.replacingOccurrences(of: "{TileMatrix}", with: "\(tile.zoom)")
+//			.replacingOccurrences(of: "{zoom}", with: "\(tile.zoom)")
+//			.replacingOccurrences(of: "{ratio}", with: UIScreen.main.scale > 1 ? "@2x" : "")
+//			.replacingOccurrences(of: "{server}", with: ["a", "b", "c"][abs(tile.x + tile.y + tile.zoom) % 3])
+//			.replacingOccurrences(of: "{abc}", with: ["a", "b", "c"][abs(tile.x + tile.y + tile.zoom) % 3])
+//			.replacingOccurrences(of: "{abcd}", with: ["a", "b", "c", "d"][abs(tile.x + tile.y + tile.zoom) % 4])
+//			.replacingOccurrences(of: "{012}", with: ["0", "1", "2"][abs(tile.x + tile.y + tile.zoom) % 3])
+//			.replacingOccurrences(of: "{0123}", with: ["0", "1", "2", "3"][abs(tile.x + tile.y + tile.zoom) % 4])
+//			.replacingOccurrences(of: "{123}", with: ["1", "2", "3"][abs(tile.x + tile.y + tile.zoom) % 3])
+//			.replacingOccurrences(of: "{1234}", with: ["1", "2", "3", "4"][abs(tile.x + tile.y + tile.zoom) % 4])
+//			.replacingOccurrences(of: "{hash}", with: ((tile.x % 4) + (tile.y % 4) * 4).description)
 			//TODO: support {switch:a,b,c} and [abc]
 			//TODO: support date formats
+			//TODO: support {c} (for example, virtualearth.net)
 		)!
 	}
 
@@ -284,5 +313,80 @@ private extension URL {
 		} catch {
 			assertionFailure("Unable to exclude \(self) from backup")
 		}
+	}
+}
+
+public extension String {
+	func replacingMultipleOccurrences(_ replacements: [String:String]) -> String {
+		let count = count
+		let maximumLength = count * 2
+		let result = withCString { cString in
+			let storage = UnsafeMutablePointer<CChar>.allocate(capacity: maximumLength)
+			memset(storage, 0, maximumLength)
+			memcpy(storage, cString, count)
+			let temp = UnsafeMutablePointer<CChar>.allocate(capacity: maximumLength)
+			
+			for (old, new) in replacements {
+				if let foundPosition = strstr(storage, old) {
+					memcpy(temp, storage, maximumLength)
+					let index = Int(bitPattern: foundPosition) - Int(bitPattern: storage)
+					storage[index] = 0
+					strcat(storage, new)
+					strcat(storage, temp.advanced(by: index + old.count))
+				}
+			}
+			
+			return storage
+		}
+		let resultString = String(cString: result)
+		return resultString
+	}
+}
+
+extension TileSource: Codable {
+	enum CodingKeys: String, CodingKey {
+		case title
+		case url
+		case tileSize
+		case minZoom
+		case maxZoom
+		case headers
+		case thumbnailUrl
+		case attribution
+		case opacity
+		case useCase
+		case ttl
+	}
+	
+	public func encode(to encoder: Encoder) throws {
+		var container = encoder.container(keyedBy: CodingKeys.self)
+		try container.encode(title, forKey: .title)
+		try container.encode(url, forKey: .url)
+		try container.encode(tileSize, forKey: .tileSize)
+		try container.encode(minZoom, forKey: .minZoom)
+		try container.encode(maxZoom, forKey: .maxZoom)
+		try container.encode(headers, forKey: .headers)
+		try container.encode(thumbnailUrl, forKey: .thumbnailUrl)
+		try container.encode(attribution, forKey: .attribution)
+		try container.encode(opacity, forKey: .opacity)
+		try container.encode(useCase, forKey: .useCase)
+		try container.encode(ttl, forKey: .ttl)
+	}
+	
+	public convenience init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		self.init(
+			title: try container.decode(String.self, forKey: .title),
+			url: try container.decode(String.self, forKey: .url),
+			tileSize: try container.decode(Int.self, forKey: .tileSize),
+			minZoom: try container.decode(Int.self, forKey: .minZoom),
+			maxZoom: try container.decode(Int.self, forKey: .maxZoom),
+			opacity: try container.decode(Float.self, forKey: .opacity),
+			useCase: try container.decode(UseCase.self, forKey: .useCase),
+			headers: try container.decode([String: String].self, forKey: .headers),
+			ttl: try container.decodeIfPresent(Double?.self, forKey: .ttl) ?? nil,
+			thumbnailUrl: try container.decodeIfPresent(String?.self, forKey: .thumbnailUrl) ?? nil,
+			attribution: try container.decodeIfPresent(String?.self, forKey: .attribution) ?? nil
+		)
 	}
 }
