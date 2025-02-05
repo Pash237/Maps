@@ -41,7 +41,7 @@ public extension Notification.Name {
 	static let mapTileLoaded = NSNotification.Name("MapTileLoaded")
 }
 
-class MapTileLayer: CALayer {
+final class MapTileLayer: CALayer {
 	
 	enum LoadState {
 		case idle
@@ -84,7 +84,7 @@ class MapTileLayer: CALayer {
 			} catch ImagePipeline.Error.dataLoadingFailed(let loadError) {
 				self.imageTask = nil
 				
-				print("Error loading tile \(self.tile): \(loadError)")
+				print("Error loading tile from \(tileSource.url(for: tile)): \(loadError)")
 
 				// treat 400 & 404 errors
 				if case let .statusCodeUnacceptable(statusCode) = loadError as? DataLoader.Error, statusCode == 404 || statusCode == 400 {

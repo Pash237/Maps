@@ -277,7 +277,7 @@ public class MapView: MapScrollView {
 //-------------------
 
 
-class Logger {
+final class Logger {
 	static let shared = Logger()
 	
 	private lazy var shortFormatter: DateFormatter = {

@@ -52,7 +52,8 @@ extension SphericalMercator {
 	
 	public func point(withZoomData data: ZoomData, from coordinates: Coordinates) -> PointOffset {
 		let x = data.radius * coordinates.longitude.radians - data.falseEasting
-		let y = ((data.radius / 2.0 * log((1.0 + sin(coordinates.latitude.radians)) / (1.0 - sin(coordinates.latitude.radians)))) - data.falseNorthing) * -1
+		let sinLatitude = sin(coordinates.latitude.radians)
+		let y = ((data.radius / 2.0 * log((1.0 + sinLatitude) / (1.0 - sinLatitude))) - data.falseNorthing) * -1
 		return Point(x: x, y: y)
 	}
 	
