@@ -139,7 +139,7 @@ public class PointMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 	}
 	
 	public func redrawLayers(allowAnimation: Bool = false) {
-		for layer in drawingLayers.values {
+		for (_, layer) in drawingLayers {
 			let _ = drawingLayersConfigs[layer.id]?(layer)
 		}
 		
@@ -173,7 +173,7 @@ public class PointMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 		let visibleCoordinateBounds = CoordinateBounds(northeast: self.coordinates(at: CGPoint(insetBounds.maxX, insetBounds.minY)),
 													   southwest: self.coordinates(at: CGPoint(insetBounds.minX, insetBounds.maxY)))
 		
-		for layer in drawingLayers.values {
+		for (_, layer) in drawingLayers {
 			if visibleCoordinateBounds.contains(layer.coordinates) {
 				positionDrawingLayer(layer)
 				if layer.isHidden {

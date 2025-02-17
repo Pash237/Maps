@@ -122,7 +122,9 @@ public class SpatialMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 	}
 	
 	private func positionDrawingLayers() {
-		drawingLayers.values.forEach(positionDrawingLayer)
+		for (_, layer) in drawingLayers {
+			positionDrawingLayer(layer)
+		}
 	}
 }
 
