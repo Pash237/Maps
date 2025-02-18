@@ -51,6 +51,7 @@ public class PointMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 	
 	private var drawingLayersConfigs: Dictionary<Int, ((PointMapLayer?) -> (PointMapLayer))> = [:]
 	private var drawingLayers: Dictionary<AnyHashable, PointMapLayer> = [:]
+	private var drawingLayerCoordinates: Dictionary<Int, Coordinates> = [:]
 	private var drawnLayerOffset: CGPoint = .zero
 	private var drawnLayerZoom: Double = 11
 	
@@ -75,20 +76,36 @@ public class PointMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 		drawingLayer.scale = Self.scale(for: zoom)
 		layer.addSublayer(drawingLayer)
 		
-		redrawLayer(id: id)
+		redrawLayer(id: id)		// TODO: configureLayer will be wastefully called twice
 		positionDrawingLayer(drawingLayer)
 		
 		return drawingLayer
 	}
 	
+	/// lazily add map layer
+	public func addMapLayer(id: AnyHashable = UUID(), at coordinates: Coordinates, _ configureLayer: @escaping ((PointMapLayer?) -> (PointMapLayer))) {
+		//remove existent layer if it's present
+		drawingLayers[id]?.removeFromSuperlayer()
+		
+		let intId = id.hashValue
+		drawingLayersConfigs[intId] = configureLayer
+		drawingLayers[id] = PointMapLayer.dummy
+		drawingLayerCoordinates[intId] = coordinates
+		
+		RunLoop.main.scheduleAtTheEndOfFrame("positionDrawingLayers") { [weak self] in
+			self?.positionDrawingLayers()
+		}
+	}
+	
 	public func removeMapLayer(_ layer: PointMapLayer) {
 		for (key, existent) in drawingLayers {
 			if layer === existent {
-				drawingLayersConfigs[layer.id] = nil
 				drawingLayers[key] = nil
 				break
 			}
 		}
+		drawingLayersConfigs[layer.id] = nil
+		drawingLayerCoordinates[layer.id] = nil
 		
 		layer.removeFromSuperlayer()
 	}
@@ -97,10 +114,28 @@ public class PointMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 		if let layer = drawingLayers[id] {
 			removeMapLayer(layer)
 		}
+		let id = id.hashValue
+		drawingLayersConfigs[id] = nil
+		drawingLayerCoordinates[id] = nil
 	}
 	
 	public func mapLayer(with id: AnyHashable) -> PointMapLayer? {
-		drawingLayers[id]
+		let layer = drawingLayers[id]
+		if layer === PointMapLayer.dummy {
+			let intId = id.hashValue
+			guard let configureLayer = drawingLayersConfigs[intId] else { return nil }
+			let drawingLayer = configureLayer(nil)
+			drawingLayer.id = intId
+			drawingLayers[id] = drawingLayer
+			drawingLayer.scale = Self.scale(for: zoom)
+			self.layer.addSublayer(drawingLayer)
+			
+			redrawLayer(id: id)
+			positionDrawingLayer(drawingLayer)
+			return drawingLayer
+		} else {
+			return layer
+		}
 	}
 	
 	public func allLayerIds() -> [AnyHashable] {
@@ -131,7 +166,7 @@ public class PointMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 			CATransaction.setDisableActions(true)
 		}
 		
-		if let layer = drawingLayers[id] {
+		if let layer = mapLayer(with: id) {
 			let _ = drawingLayersConfigs[id.hashValue]?(layer)
 		}
 				
@@ -173,8 +208,15 @@ public class PointMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 		let visibleCoordinateBounds = CoordinateBounds(northeast: self.coordinates(at: CGPoint(insetBounds.maxX, insetBounds.minY)),
 													   southwest: self.coordinates(at: CGPoint(insetBounds.minX, insetBounds.maxY)))
 		
-		for (_, layer) in drawingLayers {
-			if visibleCoordinateBounds.contains(layer.coordinates) {
+		for (id, layer) in drawingLayers {
+			let coordinates = layer === PointMapLayer.dummy ? drawingLayerCoordinates[id.hashValue]! : layer.coordinates
+			if visibleCoordinateBounds.contains(coordinates) {
+				let layer = if layer === PointMapLayer.dummy {
+					mapLayer(with: id)!
+				} else {
+					layer
+				}
+				
 				positionDrawingLayer(layer)
 				if layer.isHidden {
 					layer.isHidden = false
@@ -194,3 +236,7 @@ public class PointMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 	}
 }
 
+
+extension PointMapLayer {
+	static let dummy = PointMapLayer(coordinates: Coordinates(0, 0))
+}

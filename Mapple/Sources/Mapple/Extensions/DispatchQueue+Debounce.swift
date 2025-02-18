@@ -110,3 +110,35 @@ private extension DispatchQueue {
 	}
 
 }
+
+extension RunLoop {
+	private static var blocks: [String: () -> Void] = [:]
+	private static var firstRequestTime: [String: TimeInterval] = [:]
+	private static var isBusy = Set<String>()
+	
+	/// Schedules block to be performed at the end of the frame, once per frame.
+	/// If called multiple times per frame on the same target, only the last block will be performed.
+	public func scheduleAtTheEndOfFrame(_ target: String, _ block: @escaping () -> Void) {
+		Self.blocks[target] = block
+		if Self.firstRequestTime[target] == nil {
+			Self.firstRequestTime[target] = CFAbsoluteTimeGetCurrent()
+		}
+		
+		if Self.isBusy.contains(target) {
+			if CFAbsoluteTimeGetCurrent() - Self.firstRequestTime[target]! > 1.0 / 60.0 {
+				performScheduledBlock(target)
+			}
+			return
+		}
+		
+		Self.isBusy.insert(target)
+		perform(#selector(performScheduledBlock), target: self, argument: target, order: 0, modes: [.common])
+	}
+	
+	@objc private func performScheduledBlock(_ target: String) {
+		Self.blocks[target]?()
+		Self.blocks[target] = nil
+		Self.firstRequestTime[target] = nil
+		Self.isBusy.remove(target)
+	}
+}
