@@ -209,7 +209,17 @@ public class PointMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
 													   southwest: self.coordinates(at: CGPoint(insetBounds.minX, insetBounds.maxY)))
 		
 		for (id, layer) in drawingLayers {
-			let coordinates = layer === PointMapLayer.dummy ? drawingLayerCoordinates[id.hashValue]! : layer.coordinates
+			let coordinates: Coordinates
+			if layer === PointMapLayer.dummy {
+				if let found = drawingLayerCoordinates[id.hashValue] {
+					coordinates = found
+				} else {
+					// layer might be removed already
+					continue
+				}
+			} else {
+				coordinates = layer.coordinates
+			}
 			if visibleCoordinateBounds.contains(coordinates) {
 				let layer = if layer === PointMapLayer.dummy {
 					mapLayer(with: id)!
