@@ -33,6 +33,20 @@ public protocol TouchableMapViewLayer {
 	func layerIds(at coordinates: Coordinates, threshold: CGFloat) -> [(key: AnyHashable, distance: CGFloat)]
 }
 
+extension TouchableMapViewLayer {
+	public func layerId(at coordinates: Coordinates) -> AnyHashable? {
+		let touchedLayerIds = layerIds(at: coordinates, threshold: 30).map {
+			(key: $0.key, distance: $0.distance)
+		}
+
+		let closest = touchedLayerIds.min(by: {
+			$0.distance < $1.distance
+		})
+		
+		return closest?.key
+	}
+}
+
 public class MapView: MapScrollView {
 	private var tileLayersCache: [TileSource: [MapTile: MapTileLayer]] = [:]
 	

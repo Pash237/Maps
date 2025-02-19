@@ -19,6 +19,7 @@ public final class TileSource: Equatable, Hashable {
 	public var thumbnailUrl: String?
 	public var attribution: String?
 	public var opacity: Float = 1
+	public var useCase: UseCase = .baseLayer
 	
 	private lazy var imagePipeline: ImagePipeline = {
 		preheatCacheLookup()
@@ -30,32 +31,23 @@ public final class TileSource: Equatable, Hashable {
 	public let ttl: TimeInterval?
 	
 	private var cachedImageLookup: [MapTile:Bool] = [:]
-
-	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, opacity: Float = 1.0, headers: [String:String] = [:], thumbnailUrl: String? = nil, attribution: String? = nil) {
-		self.title = title
-		self.url = url
-		self.headers = headers
-		self.tileSize = tileSize
-		self.opacity = opacity
-		self.minZoom = minZoom
-		self.maxZoom = maxZoom
-		self.hash = abs(url.hash)
-		self.stringHash = String(hash % 1679616, radix: 36)
-		self.ttl = nil
-		self.thumbnailUrl = thumbnailUrl
-		self.attribution = attribution
-	}
 	
-	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, opacity: Float = 1.0, headers: [String:String] = [:], ttl: TimeInterval, thumbnailUrl: String? = nil, attribution: String? = nil) {
+	public enum UseCase: Codable {
+		case baseLayer
+		case overlay
+	}
+
+	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, opacity: Float = 1.0, useCase: UseCase = .baseLayer, headers: [String:String] = [:], ttl: TimeInterval? = nil, thumbnailUrl: String? = nil, attribution: String? = nil) {
 		self.title = title
 		self.url = url
 		self.headers = headers
 		self.tileSize = tileSize
 		self.opacity = opacity
+		self.useCase = useCase
 		self.minZoom = minZoom
 		self.maxZoom = maxZoom
-		self.hash = abs(url.hash)
-		self.stringHash = String(hash % 1679616, radix: 36)
+		self.hash = url.fnv1aHash
+		self.stringHash = String(abs(hash) % 1679616, radix: 36)
 		self.ttl = ttl
 		self.thumbnailUrl = thumbnailUrl
 		self.attribution = attribution
@@ -162,7 +154,12 @@ public final class TileSource: Equatable, Hashable {
 	
 	public func cachedImage(for tile: MapTile) -> CGImage? {
 		let url = url(for: tile)
-		return imagePipeline.cache.cachedImage(for: ImageRequest(url: url))?.image.cgImage
+		var request = ImageRequest(url: url)
+		request.userInfo = [
+			.tileKey: tile,
+			.tileSourceIdKey: hash
+		]
+		return imagePipeline.cache.cachedImage(for: request)?.image.cgImage
 	}
 	
 	public static func == (lhs: TileSource, rhs: TileSource) -> Bool {
@@ -172,7 +169,7 @@ public final class TileSource: Equatable, Hashable {
 	public lazy var tileCacheDirectory: URL = {
 		FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first!
 			.appendingPathComponent("TileCache", isDirectory: true)
-			.appendingPathComponent(title, isDirectory: true)
+			.appendingPathComponent(title.filenameCompatible, isDirectory: true)
 	}()
 	
 	private func defaultImagePipeline() -> ImagePipeline {
@@ -207,7 +204,7 @@ public final class TileSource: Equatable, Hashable {
 	}
 	
 	private func preheatCacheLookup() {
-		DispatchQueue.global(qos: .background).async { [self] in
+		DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + 0.5) { [self] in
 			
 			guard let path = tileCacheDirectory.path.cString(using: String.Encoding.utf8) else { return }
 			guard let dir = opendir(path) else { return }
@@ -244,9 +241,11 @@ public final class TileSource: Equatable, Hashable {
 			
 			closedir(dir);
 			
-			DispatchQueue.main.async { [self] in
-				for tile in tiles {
-					cachedImageLookup[tile] = true
+			for i in stride(from: 0, to: tiles.count, by: 1000) {
+				DispatchQueue.main.asyncAfter(deadline: .now() + Double(i)*0.04) { [self] in
+					for tile in tiles[i ..< min(i + 1000, tiles.count)] {
+						cachedImageLookup[tile] = true
+					}
 				}
 			}
 		}
@@ -338,8 +337,20 @@ public extension String {
 			
 			return storage
 		}
+		
+		// TODO: memory leak!
+		
 		let resultString = String(cString: result)
 		return resultString
+	}
+
+	var fnv1aHash: Int {
+		var hash: UInt64 = 14695981039346656037
+		for byte in utf8 {
+			hash ^= UInt64(byte)
+			hash = hash &* UInt64(1099511628211)
+		}
+		return Int(truncatingIfNeeded: hash)
 	}
 }
 
@@ -388,5 +399,16 @@ extension TileSource: Codable {
 			thumbnailUrl: try container.decodeIfPresent(String?.self, forKey: .thumbnailUrl) ?? nil,
 			attribution: try container.decodeIfPresent(String?.self, forKey: .attribution) ?? nil
 		)
+	}
+}
+
+extension String {
+	var filenameCompatible: String {
+		let invalidCharsets = CharacterSet(charactersIn: "?*|:/\\")
+			.union(.illegalCharacters)
+			.union(.controlCharacters)
+			.union(.symbols)
+			.union(.newlines)
+		return components(separatedBy: invalidCharsets).joined(separator: "-")
 	}
 }

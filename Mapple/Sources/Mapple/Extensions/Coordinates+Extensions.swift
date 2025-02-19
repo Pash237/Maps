@@ -29,16 +29,17 @@ public func *(lhs: CLLocationCoordinate2D, rhs: Double) -> CLLocationCoordinate2
 	CLLocationCoordinate2D(latitude: lhs.latitude * rhs, longitude: lhs.longitude * rhs)
 }
 
-extension Coordinates: Hashable {
-	public init(_ latitude: CLLocationDegrees, _ longitude: CLLocationDegrees) {
-		self.init(latitude: latitude, longitude: longitude)
-	}
-	
-	
+extension CLLocationCoordinate2D: @retroactive Equatable {
 	public static func ==(lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool {
 		lhs.longitude == rhs.longitude && lhs.latitude == rhs.latitude
 	}
-	
+}
+
+extension Coordinates: @retroactive Hashable {
+	public init(_ latitude: CLLocationDegrees, _ longitude: CLLocationDegrees) {
+		self.init(latitude: latitude, longitude: longitude)
+	}
+		
 	public func hash(into hasher: inout Hasher) {
 		hasher.combine(latitude)
 		hasher.combine(longitude)
