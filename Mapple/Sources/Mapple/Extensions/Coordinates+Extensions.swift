@@ -56,6 +56,8 @@ public struct CoordinateBounds: Codable, Hashable, Equatable, CustomStringConver
 	var northeast: Coordinates	// (max, max) top-right
 	var southwest: Coordinates	// (min, min) bottom-left
 	
+	public static let world = CoordinateBounds(northeast: Coordinates(85, 179), southwest: Coordinates(-85, -179))
+	
 	public init(northeast: Coordinates, southwest: Coordinates) {
 		self.northeast = northeast
 		self.southwest = southwest
@@ -70,7 +72,7 @@ public struct CoordinateBounds: Codable, Hashable, Equatable, CustomStringConver
 		//TODO: Chukotka will have troubles if points contains both -179 and 179 degrees
 		
 		guard !coordinates.isEmpty else {
-			self.init(northeast: Coordinates(85, 179), southwest: Coordinates(-85, -179))
+			self = Self.world
 			return
 		}
 		
@@ -149,9 +151,16 @@ public struct CoordinateBounds: Codable, Hashable, Equatable, CustomStringConver
 			southwest: Coordinates(southwest.latitude - inset.latitude, southwest.longitude - inset.latitude)
 		)
 	}
+	
+	public var isValid: Bool {
+		if self == .world {
+			 return false
+		}
+		return self.northeast.isValid && self.southwest.isValid
+	}
 }
 
-extension CLLocationCoordinate2D: Codable {
+extension Coordinates: Codable {
 	enum CodingKeys: CodingKey {
 		case latitude
 		case longitude
@@ -169,6 +178,26 @@ extension CLLocationCoordinate2D: Codable {
 		let longitude = try container.decode(CLLocationDegrees.self, forKey: .longitude)
 
 		self.init(latitude: latitude, longitude: longitude)
+	}
+}
+
+public extension Coordinates {
+	static let invalid = Coordinates(latitude: 37.334899, longitude: -122.009022)
+	
+	var isValid: Bool {
+		if latitude.isNaN || longitude.isNaN {
+			return false
+		}
+		if abs(latitude + longitude) < 0.0001 {
+			return false
+		}
+		if latitude > 89 || latitude < -89 {
+			return false
+		}
+		if abs(latitude - Self.invalid.latitude) < 0.00001 && abs(longitude - Self.invalid.longitude) < 0.00001 {
+			return false
+		}
+		return true
 	}
 }
 
