@@ -29,6 +29,7 @@ public final class TileSource: Equatable, Hashable {
 	public let hash: Int
 	public let stringHash: String
 	public let ttl: TimeInterval?
+	public let urls: [Int: String]?
 	
 	private var cachedImageLookup: [MapTile:Bool] = [:]
 	
@@ -37,7 +38,7 @@ public final class TileSource: Equatable, Hashable {
 		case overlay
 	}
 
-	public init(title: String, url: String, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, opacity: Float = 1.0, useCase: UseCase = .baseLayer, headers: [String:String] = [:], ttl: TimeInterval? = nil, thumbnailUrl: String? = nil, attribution: String? = nil) {
+	public init(title: String, url: String, urls: [ClosedRange<Int>: String]? = nil, tileSize: Int = 256, minZoom: Int = 1, maxZoom: Int = 20, opacity: Float = 1.0, useCase: UseCase = .baseLayer, headers: [String:String] = [:], ttl: TimeInterval? = nil, thumbnailUrl: String? = nil, attribution: String? = nil) {
 		self.title = title
 		self.url = url
 		self.headers = headers
@@ -51,10 +52,24 @@ public final class TileSource: Equatable, Hashable {
 		self.ttl = ttl
 		self.thumbnailUrl = thumbnailUrl
 		self.attribution = attribution
+		if let urls {
+			var perZoomUrls: [Int: String] = [:]
+			for zoom in minZoom...maxZoom {
+				perZoomUrls[zoom] = urls.first { $0.key.contains(zoom) }?.value
+			}
+			self.urls = perZoomUrls
+		} else {
+			self.urls = nil
+		}
 	}
 
 	public func url(for tile: MapTile) -> URL {
-		URL(string: url
+		let url = if let urls {
+			urls[tile.zoom] ?? url
+		} else {
+			url
+		}
+		return URL(string: url
 			.replacingMultipleOccurrences([
 				"{x}": "\(tile.x)",
 				"{y}": "\(tile.y)",
