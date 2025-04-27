@@ -69,6 +69,12 @@ class TileMapView: UIView, MapViewLayer {
 			let requiredScale = pow(2.0, Double(requiredZoom) - zoom)
 			let size = Double(tileSource.tileSize)
 			let margin = loadMargin
+			var offset = offset
+			if let customProjection = tileSource.projection {
+				let coordinates = projection.coordinates(from: offset, at: Double(requiredZoom))
+				offset = customProjection.point(at: Double(requiredZoom), from: coordinates)
+			}
+
 			let topLeft = projection.convert(point: offset - margin, from: zoom, to: Double(requiredZoom))
 			
 			let min = topLeft / size
@@ -330,9 +336,22 @@ class TileMapView: UIView, MapViewLayer {
 			for layer in tileLayers {
 				let scale = pow(2.0, zoom - Double(layer.tile.zoom))
 				let size = Double(tileSource.tileSize) * scale
+				var height = size
+				var tileOffset = layer.tile.offset
+				if let customProjection = tileSource.projection {
+					let coordinates = customProjection.coordinates(from: tileOffset, at: Double(layer.tile.zoom))
+					tileOffset = projection.point(at: Double(layer.tile.zoom), from: coordinates)
+					
+					// stretch tiles in elliptical projection
+					let bottomRightCoordinates = customProjection.coordinates(from: layer.tile.offset + CGPoint(x: size, y: size), at: Double(layer.tile.zoom))
+					if bottomRightCoordinates.isValid {
+						let bottomRightOffset = projection.point(at: Double(layer.tile.zoom), from: bottomRightCoordinates)
+						height = (bottomRightOffset - tileOffset).y
+					}
+				}
 				layer.frame = CGRect(
-					origin: projection.convert(point: layer.tile.offset, from: Double(layer.tile.zoom), to: zoom) - offset,
-					size: CGSize(width: size, height: size))
+					origin: projection.convert(point: tileOffset, from: Double(layer.tile.zoom), to: zoom) - offset,
+					size: CGSize(width: size, height: height))
 				
 				let zPosition = -abs(zoom.rounded() - Double(layer.tile.zoom)) - 25.0 * Double(indexAcrossMapSources) - 1
 				if layer.zPosition != zPosition {
