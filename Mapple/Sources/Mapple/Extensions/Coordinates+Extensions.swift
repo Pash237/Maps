@@ -45,7 +45,7 @@ extension Coordinates: @retroactive Hashable {
 		hasher.combine(longitude)
 	}
 	
-	func isNearlyEqual(to coordinates: Self, precision: CLLocationDegrees = 0.0000001) -> Bool {
+	public func isNearlyEqual(to coordinates: Self, precision: CLLocationDegrees = 0.0000001) -> Bool {
 		latitude.isNearlyEqual(to: coordinates.latitude, precision: precision)
 		&&
 		longitude.isNearlyEqual(to: coordinates.longitude, precision: precision)
@@ -198,6 +198,10 @@ public extension Coordinates {
 			return false
 		}
 		return true
+	}
+	
+	var isInvalid: Bool {
+		!isValid
 	}
 }
 

@@ -255,7 +255,7 @@ class TileMapView: UIView, MapViewLayer {
 			for tileLayer in tileLayers {
 				if tileLayer.tile.zoom != bestZoom && tileLayer.loadState != .loaded && !tileLayer.isAlmostLoaded && !tileSource.hasCachedImage(for: tileLayer.tile) {
 					// remove layer if its zoom doesn't match and it's not loaded
-					print("Removing \(tileLayer.tile) — not loaded and zoom doesn't match")
+//					print("Removing \(tileLayer.tile) — not loaded and zoom doesn't match")
 					remove(layer: tileLayer, in: tileSource)
 				}
 			}

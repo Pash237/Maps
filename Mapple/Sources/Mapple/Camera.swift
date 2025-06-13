@@ -96,3 +96,15 @@ extension Camera {
 		abs(rotation - camera.rotation) < 0.001
 	}
 }
+
+extension Camera: Equatable {
+	static public func == (lhs: Camera, rhs: Camera) -> Bool {
+		lhs.isNearlyEqual(to: rhs)
+	}
+}
+
+extension Camera: CustomStringConvertible {
+	public var description: String {
+		"\(center) @\(zoom)" + (rotation != 0 ? " \(rotation)°" : "")
+	}
+}
