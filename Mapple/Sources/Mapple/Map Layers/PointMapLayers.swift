@@ -11,10 +11,10 @@ open class PointMapLayer: CALayer {
 	public var coordinates: Coordinates {
 		didSet {
 			guard oldValue != coordinates else { return }
-			if let parent = superlayer?.delegate as? PointMapLayersView {
+			if let parent = superlayer?.delegate as? MapViewLayer {
 				CATransaction.begin()
 				CATransaction.setDisableActions(true)
-				let point = parent.projection.point(at: parent.zoom, from: coordinates)
+				let point = SphericalMercator().point(at: parent.zoom, from: coordinates)
 				position = point - parent.offset
 				CATransaction.commit()
 			}
@@ -44,8 +44,8 @@ open class PointMapLayer: CALayer {
 }
 
 public class PointMapLayersView: UIView, MapViewLayer, TouchableMapViewLayer {
-	private(set) var offset: Point = .zero
-	private(set) var zoom: Double = 11
+	private(set) public var offset: Point = .zero
+	private(set) public var zoom: Double = 11
 	private(set) var rotation: Radians = 0.0
 	var projection = SphericalMercator()
 	

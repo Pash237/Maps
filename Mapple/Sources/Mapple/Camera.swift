@@ -21,7 +21,7 @@ public struct Camera: Codable {
 		self.rotation = rotation
 	}
 	
-	public static func fitting(_ coordinateBounds: CoordinateBounds, with bounds: CGRect, padding: Double = 0, maxZoom: Double = 17.0, projection: Projection = SphericalMercator()) -> Camera {
+	public static func fitting(_ coordinateBounds: CoordinateBounds, with bounds: CGRect, padding: Double = 0, rotation: Double = 0, maxZoom: Double = 17.0, projection: Projection = SphericalMercator()) -> Camera {
 		guard abs(coordinateBounds.southwest.latitude - coordinateBounds.northeast.latitude) > 0.000001,
 			  abs(coordinateBounds.southwest.longitude - coordinateBounds.northeast.longitude) > 0.000001 else {
 			print("Warning! Could not fit \(coordinateBounds)")
@@ -35,7 +35,7 @@ public struct Camera: Codable {
 		)
 		let zoom = maxZoom - log2(scale)
 		
-		return Camera(center: coordinateBounds.center, zoom: zoom)
+		return Camera(center: coordinateBounds.center, zoom: zoom, rotation: rotation)
 	}
 	
 	public static func fitting(coordinates: [Coordinates], with bounds: CGRect, padding: Double = 0, projection: Projection = SphericalMercator()) -> Camera {

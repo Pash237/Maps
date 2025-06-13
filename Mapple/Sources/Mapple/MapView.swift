@@ -29,6 +29,8 @@ public struct ScrollChange {
 }
 
 public protocol MapViewLayer: UIView {
+	var offset: Point { get }
+	var zoom: Double { get }
 	func update(offset: Point, zoom: Double, rotation: Radians)
 }
 
