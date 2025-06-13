@@ -11,10 +11,13 @@ import CoreLocation
 import Nuke
 
 public enum ScrollReason {
+	case initialize
 	case drag
-	case animation
-	case cameraUpdate
 	case layoutChange
+	case navigate
+	case goBack
+	case goForward
+	case other
 }
 
 public struct ScrollChange {

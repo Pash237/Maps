@@ -103,7 +103,7 @@ public class MapScrollView: UIView {
 		isMultipleTouchEnabled = true
 		backgroundColor = .black
 		
-		updateOffset(to: camera, reason: .cameraUpdate)
+		updateOffset(to: camera, reason: .initialize)
 	}
 	
 	
@@ -111,6 +111,7 @@ public class MapScrollView: UIView {
 	private var oldZoom: Double = 0
 	private var oldRotation: Radians = -10000
 	private var scrollChange: ScrollChange = .zero
+	private var scrollReason: ScrollReason = .other
 	
 	func updateOffset(to camera: Camera, reason: ScrollReason) {
 		self.camera = camera
@@ -131,11 +132,15 @@ public class MapScrollView: UIView {
 		oldRotation = rotation
 	}
 	
-	public func setCamera(_ newCamera: Camera, animated: Bool = true) {
+	public func setCamera(_ newCamera: Camera, animated: Bool = true, reason: ScrollReason? = nil) {
 		let targetCamera = newCamera.withRotationClose(to: camera.rotation)
 		var animated = animated
+		scrollReason = reason ?? scrollReason
 		if animated {
-			let tooFar = (point(at: targetCamera.center) - point(at: camera.center)).maxDimension > max(bounds.width, bounds.height) * 3
+			let midZoom = (targetCamera.zoom + camera.zoom)/2
+			let targetPoint = projection.point(at: midZoom, from: targetCamera.center)
+			let currentPoint = projection.point(at: midZoom, from: camera.center)
+			let tooFar = (targetPoint - currentPoint).maxDimension > max(bounds.width, bounds.height) * 3
 			if tooFar {
 				animated = false
 			}
@@ -143,7 +148,7 @@ public class MapScrollView: UIView {
 		
 		guard animated else {
 			self.targetCamera = targetCamera
-			updateOffset(to: targetCamera, reason: .cameraUpdate)
+			updateOffset(to: targetCamera, reason: scrollReason)
 			return
 		}
 		
@@ -248,6 +253,7 @@ public class MapScrollView: UIView {
 		previousTouchTravelDistance = lastTouchTravelDistance
 		lastTouchTravelDistance = 0
 		singleTapPossible = false
+		scrollReason = .drag
 		
 		endTracking()
 		if event.activeTouches.count == 1,
@@ -280,6 +286,9 @@ public class MapScrollView: UIView {
 		var allTouches = event.activeTouches
 		let centroid = event.centroid(in: mapContentsView)
 		let centroidInWindow = event.centroid()
+		let previousOffset = offset
+		let previousZoom = zoom
+		let previousRotation = rotation
 		
 		CADisplayLink.enableProMotion()
 		
@@ -395,7 +404,9 @@ public class MapScrollView: UIView {
 		
 		camera = currentCamera()
 		targetCamera = camera
-		didScroll(reason: .drag, change: scrollChange)
+		if previousOffset != offset || previousZoom != zoom || previousRotation != rotation {
+			didScroll(reason: .drag, change: scrollChange)
+		}
 		animationDisplayLink.isPaused = true
 		
 		self.previousCentroid = centroid
@@ -449,7 +460,7 @@ public class MapScrollView: UIView {
 				let zoomCenterOnMap = offset + (zoomAndRotationAnchor ?? (contentBounds.center + ((previousCentroid ?? contentBounds.center) - contentBounds.center) * 0.5))
 				doubleTapZoomTimestamp = event.timestamp
 				
-				setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom + 1, rotation: rotation), animated: true)
+				setCamera(Camera(center: projection.coordinates(from: zoomCenterOnMap, at: zoom), zoom: zoom + 1, rotation: rotation), animated: true, reason: .drag)
 			} else {
 				doubleTapZoomTimestamp = nil
 			}
@@ -575,7 +586,7 @@ public class MapScrollView: UIView {
 		nextCamera.zoom += (targetCamera.zoom - zoom) * speed
 		nextCamera.rotation += (targetCamera.withRotationClose(to: rotation).rotation - rotation) * speed
 		
-		updateOffset(to: nextCamera, reason: .animation)
+		updateOffset(to: nextCamera, reason: scrollReason)
 		
 		if camera.isNearlyEqual(to: targetCamera) {
 			camera = targetCamera
