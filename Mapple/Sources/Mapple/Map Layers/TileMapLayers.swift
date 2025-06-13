@@ -71,8 +71,8 @@ class TileMapView: UIView, MapViewLayer {
 			let margin = loadMargin
 			var offset = offset
 			if let customProjection = tileSource.projection {
-				let coordinates = projection.coordinates(from: offset, at: Double(requiredZoom))
-				offset = customProjection.point(at: Double(requiredZoom), from: coordinates)
+				let coordinates = projection.coordinates(from: offset, at: zoom)
+				offset = customProjection.point(at: zoom, from: coordinates)
 			}
 
 			let topLeft = projection.convert(point: offset - margin, from: zoom, to: Double(requiredZoom))
